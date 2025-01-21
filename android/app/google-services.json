@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "929559084297",
+    "project_id": "enjoy-b49ea",
+    "storage_bucket": "enjoy-b49ea.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:929559084297:android:409932234df6a071fde7d8",
+        "android_client_info": {
+          "package_name": "com.example.enjoy"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "929559084297-6caf3dbpr0td6ocsiv230on7nide9pnm.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.enjoy",
+            "certificate_hash": "ab4d97a7d26cae254fa75a9eaf01bcd7ffa6ea0b"
+          }
+        },
+        {
+          "client_id": "929559084297-3m9pt1ahroujlv5alf0ust32ga4t2jtq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAkdaqJTbDBro0GN0jxXygYmJHCsjNhj_k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "929559084297-3m9pt1ahroujlv5alf0ust32ga4t2jtq.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "929559084297-3d61vvo0dis3heb48g2ic92u7qevnsl3.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.enjoy.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
