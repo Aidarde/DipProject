@@ -41,48 +41,23 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyAWSOaSkezf_yeFRFWMv2STSV2mBA3N5MQ',
-    appId: '1:929559084297:web:8cdb20bf58de2086fde7d8',
-    messagingSenderId: '929559084297',
-    projectId: 'enjoy-b49ea',
-    authDomain: 'enjoy-b49ea.firebaseapp.com',
-    storageBucket: 'enjoy-b49ea.firebasestorage.app',
-    measurementId: 'G-72EN24MHH2',
+    
+    
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyAkdaqJTbDBro0GN0jxXygYmJHCsjNhj_k',
-    appId: '1:929559084297:android:90babfbe0c6a0be5fde7d8',
-    messagingSenderId: '929559084297',
-    projectId: 'enjoy-b49ea',
-    storageBucket: 'enjoy-b49ea.firebasestorage.app',
+   
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyAqrL2opuk-Jkx_my9Pu5Weijt_m4AIKVU',
-    appId: '1:929559084297:ios:c92929134d06e745fde7d8',
-    messagingSenderId: '929559084297',
-    projectId: 'enjoy-b49ea',
-    storageBucket: 'enjoy-b49ea.firebasestorage.app',
-    iosBundleId: 'com.example.enjoy',
+   
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyAqrL2opuk-Jkx_my9Pu5Weijt_m4AIKVU',
-    appId: '1:929559084297:ios:bedcb7edf24281a6fde7d8',
-    messagingSenderId: '929559084297',
-    projectId: 'enjoy-b49ea',
-    storageBucket: 'enjoy-b49ea.firebasestorage.app',
-    iosBundleId: 'com.enjoy.app',
+    
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyAWSOaSkezf_yeFRFWMv2STSV2mBA3N5MQ',
-    appId: '1:929559084297:web:f4abe0cab371762ffde7d8',
-    messagingSenderId: '929559084297',
-    projectId: 'enjoy-b49ea',
-    authDomain: 'enjoy-b49ea.firebaseapp.com',
-    storageBucket: 'enjoy-b49ea.firebasestorage.app',
-    measurementId: 'G-96NRQ4YB67',
+    
   );
 }
