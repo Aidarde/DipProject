@@ -1,14 +1,30 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import '../providers/user_provider.dart';
 
-class RewardsScreen extends StatelessWidget {
+class RewardsScreen extends StatefulWidget {
   const RewardsScreen({super.key});
 
   @override
+  State<RewardsScreen> createState() => _RewardsScreenState();
+}
+
+class _RewardsScreenState extends State<RewardsScreen> {
+  @override
+  void initState() {
+    super.initState();
+
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final uid = userProvider.user?.uid;
+    if (uid != null) {
+      userProvider.loadUser(uid); // обновляем данные пользователя при входе
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+
     final userProvider = Provider.of<UserProvider>(context);
     final user = userProvider.user;
 

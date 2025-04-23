@@ -65,26 +65,34 @@ class CartScreen extends StatelessWidget {
                   'items': cart.items,
                   'total': cart.totalPrice,
                   'timestamp': FieldValue.serverTimestamp(),
-                  'status': 'в обработке', // ✅ добавили статус
+                  'status': 'в обработке',
                 };
 
+                try {
+                  await FirebaseFirestore.instance.collection('orders').add(orderData);
 
-                  try {
-                    await FirebaseFirestore.instance.collection('orders').add(orderData);
-                    cart.clearCart();
+                  // ✅ Начисляем бонусы (10% от суммы)
+                  final earnedPoints = (cart.totalPrice * 0.1).round();
+                  await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+                    'bonusPoints': FieldValue.increment(earnedPoints),
+                  });
 
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Заказ оформлен успешно')),
-                    );
-                    Navigator.pop(context); // возвращаемся назад
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Ошибка при оформлении заказа: $e')),
-                    );
-                  }
-                },
+                  cart.clearCart();
 
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Заказ оформлен. Начислено $earnedPoints бонусов!')),
+                  );
+
+                  Navigator.pop(context);
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Ошибка при оформлении заказа: $e')),
+                  );
+                }
+              },
+
+
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
                 child: const Text('Оформить'),
               ),
           ],

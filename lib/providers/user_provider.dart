@@ -11,9 +11,10 @@ class UserProvider extends ChangeNotifier {
     final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
     if (doc.exists) {
       _user = AppUser.fromMap(doc.id, doc.data()!);
-      notifyListeners();
+      notifyListeners(); // это важно для обновления UI
     }
   }
+
 
   bool get isAdmin => _user?.role == 'admin';
 
