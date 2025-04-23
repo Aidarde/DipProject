@@ -1,304 +1,111 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
+import 'package:enjoy/providers/user_provider.dart';
 import 'package:flutter/material.dart';
-import 'firebase_options.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
+import 'screens/login_screen.dart';
+import 'screens/main_screen.dart';
+import 'screens/admin_screen.dart';
+import 'providers/branch_provider.dart';
+import 'providers/cart_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
+  await Firebase.initializeApp();
+
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => UserProvider()),
+        ChangeNotifierProvider(create: (_) => BranchProvider()),
+        ChangeNotifierProvider(create: (_) => CartProvider()),
+      ],
+      child: const MyApp(),
+    ),
   );
-  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Fast Food App',
-      theme: ThemeData(
-        primaryColor: Colors.red,
-        fontFamily: 'Roboto',
-      ),
-      home: const MainScreen(),
-    );
-  }
-}
+  Future<Widget> _getInitialScreen() async {
+    final user = FirebaseAuth.instance.currentUser;
+    print('🟡 Пользователь: $user');
 
-class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+    if (user == null) {
+      print('Нет пользователя → LoginScreen');
+      return const LoginScreen();
+    }
 
-  @override
-  _MainScreenState createState() => _MainScreenState();
-}
-
-class _MainScreenState extends State<MainScreen> {
-  int _selectedIndex = 0;
-
-  final List<Widget> _pages = [
-    const HomeScreen(),
-    OrdersScreen(),
-    const RewardsScreen(),
-    const SettingsScreen(),
-  ];
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Image.asset('assets/logo.png', height: 40),
-        centerTitle: true,
-        backgroundColor: Colors.red,
-        elevation: 0,
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.red.shade50, Colors.white],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: _pages[_selectedIndex],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        selectedItemColor: Colors.red,
-        unselectedItemColor: Colors.grey,
-        showSelectedLabels: true,
-        showUnselectedLabels: true,
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Главная',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.fastfood),
-            label: 'Заказы',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.star),
-            label: 'Баллы',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Настройки',
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
-
-  Future<UserCredential?> signInWithGoogle() async {
     try {
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-      final GoogleSignInAuthentication? googleAuth =
-      await googleUser?.authentication;
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
 
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth?.accessToken,
-        idToken: googleAuth?.idToken,
-      );
+      if (!doc.exists) {
+        print('🟡 Документ не существует. Создаем нового пользователя...');
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .set({
+          'role': 'user',
+          'email': user.email ?? '',
+        });
 
-      return await FirebaseAuth.instance.signInWithCredential(credential);
+        return const MainScreen();
+      }
+
+      final role = doc.data()?['role'] ?? 'user';
+      print('🟢 Роль пользователя: $role');
+
+      if (role == 'admin') {
+        return const AdminScreen();
+      } else {
+        return const MainScreen();
+      }
     } catch (e) {
-      debugPrint('Ошибка входа через Google: $e');
-      return null;
+      print('Ошибка при определении роли: $e');
+      return const Scaffold(
+        body: Center(child: Text('Произошла ошибка при запуске приложения')),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const Text(
-            'Добро пожаловать!',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Colors.red,
-            ),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton.icon(
-            onPressed: () async {
-              final userCredential = await signInWithGoogle();
-              if (userCredential != null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Вход выполнен: ${userCredential.user?.displayName}',
-                    ),
-                  ),
-                );
-              }
-            },
-            icon: const Icon(Icons.login),
-            label: const Text('Войти через Google'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'Выберите ближайший филиал для продолжения.',
-            style: TextStyle(fontSize: 16, color: Colors.black54),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class OrdersScreen extends StatefulWidget {
-  const OrdersScreen({super.key});
-
-  @override
-  _OrdersScreenState createState() => _OrdersScreenState();
-}
-
-class _OrdersScreenState extends State<OrdersScreen> {
-  final List<Map<String, dynamic>> _menuItems = [
-    {'name': 'Чизбургер', 'price': 150, 'image': 'assets/images/burger.png'},
-    {'name': 'Картофель фри', 'price': 100, 'image': 'assets/images/fries.png'},
-    {'name': 'Кола', 'price': 80, 'image': 'assets/images/cola.png'},
-  ];
-
-  final List<Map<String, dynamic>> _cart = [];
-
-  void _addToCart(Map<String, dynamic> item) {
-    setState(() {
-      _cart.add(item);
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${item['name']} добавлен в корзину!')),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Expanded(
-          child: ListView.builder(
-            itemCount: _menuItems.length,
-            itemBuilder: (context, index) {
-              final item = _menuItems[index];
-              return Card(
-                margin: const EdgeInsets.all(8.0),
-                child: ListTile(
-                  leading: Image.asset(item['image'], width: 50),
-                  title: Text(item['name'],
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                      )),
-                  subtitle: Text('${item['price']} сом'),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.add_shopping_cart),
-                    onPressed: () => _addToCart(item),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        if (_cart.isNotEmpty)
-          Container(
-            padding: const EdgeInsets.all(16.0),
-            color: Colors.red.shade100,
-            child: Column(
-              children: [
-                const Text('Корзина:',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    )),
-                ..._cart.map((item) => Text('- ${item['name']}')).toList(),
-                const SizedBox(height: 8),
-                ElevatedButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Заказ оформлен!')),
-                    );
-                    setState(() {
-                      _cart.clear();
-                    });
-                  },
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                  child: const Text('Оформить заказ'),
-                )
-              ],
-            ),
-          ),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => BranchProvider()),
+        ChangeNotifierProvider(create: (_) => CartProvider()),
       ],
-    );
-  }
-}
-
-class RewardsScreen extends StatelessWidget {
-  const RewardsScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Text('Здесь будут отображаться ваши баллы.'),
-    );
-  }
-}
-
-class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Text(
-            'Настройки пользователя',
-            style: TextStyle(fontSize: 18),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Вы вышли из системы.')),
+      child: MaterialApp(
+        title: 'Enjoy App',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(primarySwatch: Colors.red),
+        routes: {
+          '/admin': (context) => const AdminScreen(),
+          '/main': (context) => const MainScreen(),
+          '/login': (context) => const LoginScreen(),
+        },
+        home: FutureBuilder<Widget>(
+          future: _getInitialScreen(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
               );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Выйти'),
-          ),
-        ],
+            } else if (snapshot.hasError) {
+              print('Snapshot error: ${snapshot.error}');
+              return const Scaffold(
+                body: Center(child: Text('Ошибка загрузки')),
+              );
+            } else {
+              return snapshot.data!;
+            }
+          },
+        ),
       ),
     );
   }
