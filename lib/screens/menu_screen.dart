@@ -32,7 +32,12 @@ class _MenuScreenState extends State<MenuScreen> {
   ];
 
   void addToCart(Map<String, dynamic> item) {
-    Provider.of<CartProvider>(context, listen: false).addItem(item);
+    // Добавление товара в корзину
+    Provider.of<CartProvider>(context, listen: false).addItem(
+      name: item['name'],
+      price: item['price'],
+      image: item['image'],
+    );
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('${item['name']} добавлен в корзину')),
     );
@@ -56,7 +61,6 @@ class _MenuScreenState extends State<MenuScreen> {
           )
         ],
       ),
-
       body: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: menuItems.length,
@@ -67,13 +71,15 @@ class _MenuScreenState extends State<MenuScreen> {
             elevation: 4,
             margin: const EdgeInsets.symmetric(vertical: 10),
             child: ListTile(
-              leading: Image.asset(item['image'], width: 50),
+              leading: SizedBox(
+                width: 50, // Ограничиваем ширину изображения
+                child: Image.asset(item['image'], fit: BoxFit.cover),
+              ),
               title: Text(item['name']),
               subtitle: Text('${item['price']} сом'),
               trailing: IconButton(
                 icon: const Icon(Icons.add_shopping_cart),
                 onPressed: () => addToCart(item),
-
               ),
             ),
           );

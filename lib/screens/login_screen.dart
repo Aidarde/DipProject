@@ -35,6 +35,13 @@ class LoginScreen extends StatelessWidget {
                     final userProvider = Provider.of<UserProvider>(context, listen: false);
                     await userProvider.loadUser(user.uid);
 
+                    if (userProvider.user == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Ошибка при загрузке данных пользователя')),
+                      );
+                      return;
+                    }
+
                     if (userProvider.isAdmin) {
                       Navigator.pushReplacementNamed(context, '/admin');
                     } else {
@@ -44,7 +51,6 @@ class LoginScreen extends StatelessWidget {
                       );
                     }
                   } else {
-                    // Можно вывести SnackBar или другой UI, если вход не удался
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Не удалось войти через Google')),
                     );

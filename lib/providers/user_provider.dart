@@ -2,21 +2,34 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 
-class UserProvider extends ChangeNotifier {
+class UserProvider with ChangeNotifier {
   AppUser? _user;
+  bool _isLoading = false;
 
   AppUser? get user => _user;
+  bool get isLoading => _isLoading;
+
+  /// Добавляем геттер isAdmin
+  bool get isAdmin => _user?.isAdmin ?? false;
 
   Future<void> loadUser(String uid) async {
-    final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-    if (doc.exists) {
-      _user = AppUser.fromMap(doc.id, doc.data()!);
-      notifyListeners(); // это важно для обновления UI
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final snapshot = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+
+      if (snapshot.exists) {
+        final data = snapshot.data()!;
+        _user = AppUser.fromMap(snapshot.id, data);
+      } else {
+        _user = null;
+      }
+    } catch (e) {
+      _user = null;
     }
+
+    _isLoading = false;
+    notifyListeners();
   }
-
-
-  bool get isAdmin => _user?.role == 'admin';
-
-  int get bonusPoints => _user?.bonusPoints ?? 0;
 }

@@ -1,30 +1,30 @@
 class AppUser {
   final String uid;
-  final String email;
-  final String role;
+  final String? name;
   final int bonusPoints;
+  final bool isAdmin;
 
   AppUser({
     required this.uid,
-    required this.email,
-    required this.role,
+    this.name,
     this.bonusPoints = 0,
+    this.isAdmin = false,
   });
 
-  factory AppUser.fromMap(String uid, Map<String, dynamic> map) {
+  factory AppUser.fromMap(String uid, Map<String, dynamic> data) {
     return AppUser(
       uid: uid,
-      email: map['email'] ?? '',
-      role: map['role'] ?? 'user',
-      bonusPoints: map['bonusPoints'] ?? 0,
+      name: data['name'],
+      bonusPoints: data['bonusPoints'] ?? 0,
+      isAdmin: data['role'] == 'admin',
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
-      'email': email,
-      'role': role,
+      'name': name,
       'bonusPoints': bonusPoints,
+      'isAdmin': isAdmin,
     };
   }
 }

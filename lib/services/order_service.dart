@@ -9,7 +9,7 @@ class OrderService {
     try {
       final querySnapshot = await ordersCollection
           .where('userId', isEqualTo: userId)
-          .orderBy('timestamp', descending: true) // ← исправлено
+          .orderBy('timestamp', descending: true)
           .get();
 
       print('Найдено заказов: ${querySnapshot.docs.length}');

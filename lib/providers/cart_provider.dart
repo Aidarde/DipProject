@@ -5,10 +5,21 @@ class CartProvider extends ChangeNotifier {
 
   List<Map<String, dynamic>> get items => _items;
 
-  void addItem(Map<String, dynamic> item) {
-    _items.add(item);
+  void addItem({
+    required String name,
+    required int price,
+    required String image,
+    String? rewardId,
+  }) {
+    _items.add({
+      'name': name,
+      'price': price,
+      'image': image,
+      if (rewardId != null) 'rewardId': rewardId, // Для отличия бонусов
+    });
     notifyListeners();
   }
+
 
   void removeItem(int index) {
     _items.removeAt(index);
@@ -23,4 +34,19 @@ class CartProvider extends ChangeNotifier {
     _items.clear();
     notifyListeners();
   }
+
+  void addRewardItemToCart({
+    required String name,
+    required String image,
+    required String rewardId,
+  }) {
+    _items.add({
+      'name': name,
+      'image': image,
+      'price': 0, // бонусный товар бесплатно
+      'rewardId': rewardId, // пометка, что это бонус
+    });
+    notifyListeners();
+  }
+
 }
