@@ -1,3 +1,5 @@
+import 'package:enjoy/providers/user_provider.dart';
+import 'package:enjoy/services/order_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
@@ -47,49 +49,24 @@ class CartScreen extends StatelessWidget {
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             ElevatedButton(
               onPressed: () async {
-                if (cart.items.isEmpty) return;
+                final cart = Provider.of<CartProvider>(context, listen: false);
+                final branchProvider = Provider.of<BranchProvider>(context, listen: false);
+                final userProvider = Provider.of<UserProvider>(context, listen: false);
 
-                final user = FirebaseAuth.instance.currentUser;
-                final branchName = Provider.of<BranchProvider>(context, listen: false).selectedBranch;
+                final success = await OrderService.placeOrder(context, cart, branchProvider, userProvider);
 
-                if (user == null || branchName == null) {
+                if (success) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Ошибка: пользователь или филиал не найден')),
+                    const SnackBar(content: Text('Заказ оформлен и бонусы начислены!')),
                   );
-                  return;
-                }
-
-                final orderData = {
-                  'userId': user.uid,
-                  'branchName': branchName,
-                  'items': cart.items,
-                  'total': cart.totalPrice,
-                  'timestamp': FieldValue.serverTimestamp(),
-                  'status': 'в обработке',
-                };
-
-                try {
-                  await FirebaseFirestore.instance.collection('orders').add(orderData);
-
-                  // ✅ Начисляем бонусы (10% от суммы)
-                  final earnedPoints = (cart.totalPrice * 0.1).round();
-                  await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-                    'bonusPoints': FieldValue.increment(earnedPoints),
-                  });
-
-                  cart.clearCart();
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Заказ оформлен. Начислено $earnedPoints бонусов!')),
-                  );
-
                   Navigator.pop(context);
-                } catch (e) {
+                } else {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Ошибка при оформлении заказа: $e')),
+                    const SnackBar(content: Text('Ошибка при оформлении заказа')),
                   );
                 }
               },
+
 
 
               style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
