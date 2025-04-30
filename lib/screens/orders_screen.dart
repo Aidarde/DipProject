@@ -44,16 +44,30 @@ class OrdersScreen extends StatelessWidget {
             itemCount: orders.length,
             itemBuilder: (context, index) {
               final order = orders[index].data();
+              final items = List<Map<String, dynamic>>.from(order['items'] ?? []);
               final branchName = order['branchName'] ?? 'Неизвестно';
               final total = order['total'] ?? 0;
               final status = order['status'] ?? 'Неизвестно';
               final timestamp = (order['timestamp'] as Timestamp?)?.toDate();
 
+              final color = _statusColor(status);
+
               return Card(
                 margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                child: ListTile(
+                child: ExpansionTile(
+                  tilePadding: const EdgeInsets.symmetric(horizontal: 16),
                   title: Text('Филиал: $branchName'),
-                  subtitle: Text('Сумма: $total сом\nСтатус: $status\n${timestamp != null ? _formatDate(timestamp) : ''}'),
+                  subtitle: Text(
+                    'Сумма: $total сом\nСтатус: ${status.toString().toUpperCase()}\nДата: ${timestamp != null ? _formatDate(timestamp) : ''}',
+                    style: TextStyle(color: color),
+                  ),
+                  children: [
+                    ...items.map((item) => ListTile(
+                      title: Text(item['name']),
+                      subtitle: Text('${item['price']} сом'),
+                      leading: Image.asset(item['image'], width: 40, height: 40),
+                    )),
+                  ],
                 ),
               );
             },
@@ -64,6 +78,21 @@ class OrdersScreen extends StatelessWidget {
   }
 
   String _formatDate(DateTime date) {
-    return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year}';
+    return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+  }
+
+  Color _statusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'ожидается':
+        return Colors.orange;
+      case 'в обработке':
+        return Colors.blue;
+      case 'готов':
+        return Colors.green;
+      case 'выдан':
+        return Colors.grey;
+      default:
+        return Colors.black;
+    }
   }
 }
