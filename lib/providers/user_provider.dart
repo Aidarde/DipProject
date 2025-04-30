@@ -8,21 +8,19 @@ class UserProvider with ChangeNotifier {
 
   AppUser? get user => _user;
   bool get isLoading => _isLoading;
-  bool get isAdmin => _user?.isAdmin ?? false;
 
-  Future<void> loadUser(String uid, {bool forceReload = false}) async {
-    if (!forceReload && _user != null && _user!.uid == uid) return; // предотвращаем повторную загрузку
-
+  Future<void> loadUser(String uid) async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      final snapshot =
-      await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      final snap = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get();
 
-      if (snapshot.exists) {
-        final data = snapshot.data()!;
-        _user = AppUser.fromMap(snapshot.id, data);
+      if (snap.exists) {
+        _user = AppUser.fromMap(snap.id, snap.data()!);
       } else {
         _user = null;
       }
@@ -32,8 +30,5 @@ class UserProvider with ChangeNotifier {
 
     _isLoading = false;
     notifyListeners();
-  }
-  Stream<DocumentSnapshot<Map<String, dynamic>>> userStream(String userId) {
-    return FirebaseFirestore.instance.collection('users').doc(userId).snapshots();
   }
 }

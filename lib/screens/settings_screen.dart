@@ -22,9 +22,12 @@ class SettingsScreen extends StatelessWidget {
               Row(
                 children: [
                   CircleAvatar(
-                    backgroundImage: NetworkImage(user.photoURL ?? ''),
+                    backgroundImage: (user.photoURL != null && user.photoURL!.isNotEmpty)
+                        ? NetworkImage(user.photoURL!)
+                        : const AssetImage('assets/default_avatar.png') as ImageProvider,
                     radius: 30,
-                  ),
+                  )
+                  ,
                   const SizedBox(width: 16),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

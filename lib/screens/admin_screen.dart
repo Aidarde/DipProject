@@ -1,78 +1,104 @@
 // lib/screens/admin_screen.dart
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/material.dart';
 
-class AdminScreen extends StatefulWidget {
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
+
+import '../providers/user_provider.dart';
+import '../services/auth_service.dart';  // для выхода
+
+class AdminScreen extends StatelessWidget {
   const AdminScreen({super.key});
 
   @override
-  State<AdminScreen> createState() => _AdminScreenState();
-}
-
-class _AdminScreenState extends State<AdminScreen> {
-  final CollectionReference ordersRef =
-  FirebaseFirestore.instance.collection('orders');
-
-  Future<void> updateOrderStatus(String orderId, String newStatus) async {
-    await ordersRef.doc(orderId).update({'status': newStatus});
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final userProv = Provider.of<UserProvider>(context);
+    final appUser = userProv.user;
+
+    // Если по какой-то причине профиль ещё не загрузился
+    if (userProv.isLoading || appUser == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final branchName = appUser.branchName;
+    if (branchName == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Панель администратора')),
+        body: const Center(child: Text('Не указан филиал для этого администратора')),
+      );
+    }
+
+    // Поток только тех заказов, что относятся к этому branchName
+    final ordersStream = FirebaseFirestore.instance
+        .collection('orders')
+        .where('branchName', isEqualTo: branchName)
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Панель администратора'),
+        title: Text('Админ: $branchName'),
         backgroundColor: Colors.redAccent,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              await AuthService.signOut();
+              // после signOut AuthWrapper автоматически покажет LoginScreen
+            },
+          )
+        ],
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: ordersRef.orderBy('timestamp', descending: true).snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return const Center(child: Text('Ошибка при загрузке заказов'));
+      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: ordersStream,
+        builder: (context, snap) {
+          if (snap.hasError) {
+            return Center(child: Text('Ошибка при загрузке: ${snap.error}'));
           }
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          if (snap.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final orders = snapshot.data!.docs;
-
-          if (orders.isEmpty) {
-            return const Center(child: Text('Нет заказов'));
+          final docs = snap.data!.docs;
+          if (docs.isEmpty) {
+            return const Center(child: Text('Нет заказов для вашего филиала'));
           }
 
           return ListView.builder(
-            itemCount: orders.length,
-            itemBuilder: (context, index) {
-              final doc = orders[index];
-              final data = doc.data() as Map<String, dynamic>;
-
-              final items = List<Map<String, dynamic>>.from(data['items']);
-              final status = data['status'] ?? 'ожидается';
-              final branch = data['branchName'] ?? '—';
+            itemCount: docs.length,
+            itemBuilder: (ctx, i) {
+              final data = docs[i].data();
+              final items = List<Map<String, dynamic>>.from(data['items'] ?? []);
+              final status = data['status'] ?? '—';
               final total = data['total'] ?? 0;
-              final timestamp = data['timestamp'] as Timestamp?;
-              final createdAt = timestamp?.toDate();
+              final ts = (data['timestamp'] as Timestamp?)?.toDate();
 
               return Card(
-                margin: const EdgeInsets.all(10),
+                margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
                 child: ExpansionTile(
-                  title: Text('Филиал: $branch'),
+                  title: Text('Заказ #${docs[i].id}'),
                   subtitle: Text(
-                    'Сумма: $total сом\nСтатус: ${status.toString().toUpperCase()}\nДата: ${createdAt?.toLocal().toString().split('.')[0] ?? ''}',
+                    'Сумма: $total сом\n'
+                        'Статус: ${status.toString().toUpperCase()}\n'
+                        'Дата: ${ts != null ? ts.toLocal().toString().split('.')[0] : '—'}',
                   ),
                   children: [
-                    ...items.map((item) => ListTile(
-                      title: Text(item['name']),
-                      subtitle: Text('${item['price']} сом'),
-                      leading: Image.asset(item['image'], width: 40),
+                    ...items.map((it) => ListTile(
+                      leading: it['image'] != null
+                          ? Image.asset(it['image'], width: 32, height: 32)
+                          : const Icon(Icons.fastfood),
+                      title: Text(it['name']),
+                      trailing: Text('${it['price']} сом'),
                     )),
                     const Divider(),
                     Padding(
-                      padding: const EdgeInsets.all(8.0),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       child: Row(
                         children: [
                           const Text('Изменить статус:'),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 12),
                           DropdownButton<String>(
                             value: status,
                             items: const [
@@ -81,9 +107,12 @@ class _AdminScreenState extends State<AdminScreen> {
                               DropdownMenuItem(value: 'готов', child: Text('Готов')),
                               DropdownMenuItem(value: 'выдан', child: Text('Выдан')),
                             ],
-                            onChanged: (newValue) {
-                              if (newValue != null) {
-                                updateOrderStatus(doc.id, newValue);
+                            onChanged: (newStatus) {
+                              if (newStatus != null) {
+                                FirebaseFirestore.instance
+                                    .collection('orders')
+                                    .doc(docs[i].id)
+                                    .update({'status': newStatus});
                               }
                             },
                           ),

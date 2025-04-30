@@ -1,30 +1,31 @@
+// lib/models/user_model.dart
 class AppUser {
   final String uid;
-  final String? name;
+  final String email;
+  final String role;       // "user" или "admin"
+  final String? branchName;
   final int bonusPoints;
-  final bool isAdmin;
 
   AppUser({
     required this.uid,
-    this.name,
+    required this.email,
+    required this.role,
+    this.branchName,
     this.bonusPoints = 0,
-    this.isAdmin = false,
   });
 
-  factory AppUser.fromMap(String uid, Map<String, dynamic> data) {
-    return AppUser(
-      uid: uid,
-      name: data['name'],
-      bonusPoints: data['bonusPoints'] ?? 0,
-      isAdmin: data['role'] == 'admin',
-    );
-  }
+  factory AppUser.fromMap(String uid, Map<String, dynamic> map) => AppUser(
+    uid: uid,
+    email: map['email'] ?? '',
+    role: map['role'] ?? 'user',
+    branchName: map['branchName'],
+    bonusPoints: map['bonusPoints'] as int? ?? 0,
+  );
 
-  Map<String, dynamic> toMap() {
-    return {
-      'name': name,
-      'bonusPoints': bonusPoints,
-      'isAdmin': isAdmin,
-    };
-  }
+  Map<String, dynamic> toMap() => {
+    'email': email,
+    'role': role,
+    'branchName': branchName,
+    'bonusPoints': bonusPoints,
+  };
 }
