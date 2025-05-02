@@ -16,7 +16,6 @@ class _RewardsScreenState extends State<RewardsScreen> {
   @override
   void initState() {
     super.initState();
-    // Загружаем пользователя при инициализации
     final uid = Provider.of<UserProvider>(context, listen: false).user?.uid;
     if (uid != null) {
       Provider.of<UserProvider>(context, listen: false).loadUser(uid);
@@ -39,6 +38,7 @@ class _RewardsScreenState extends State<RewardsScreen> {
       appBar: AppBar(
         title: const Text('Бонусы'),
         backgroundColor: Colors.redAccent,
+        elevation: 0,
       ),
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         stream: FirebaseFirestore.instance.collection('users').doc(uid).snapshots(),
@@ -53,10 +53,20 @@ class _RewardsScreenState extends State<RewardsScreen> {
           final bonusPoints = (userSnap.data!.data()!['bonusPoints'] as int?) ?? 0;
 
           return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
                 padding: const EdgeInsets.all(16),
-                child: Text('Ваши баллы: $bonusPoints', style: const TextStyle(fontSize: 18)),
+                child: Row(
+                  children: [
+                    const Icon(Icons.star, color: Colors.amber, size: 28),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Ваши баллы: $bonusPoints',
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
               ),
               Expanded(
                 child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -75,6 +85,7 @@ class _RewardsScreenState extends State<RewardsScreen> {
                     }
 
                     return ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       itemCount: rewards.length,
                       itemBuilder: (context, index) {
                         final doc = rewards[index];
@@ -85,63 +96,83 @@ class _RewardsScreenState extends State<RewardsScreen> {
                         final canExchange = bonusPoints >= cost;
 
                         return Card(
-                          margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                          child: ListTile(
-                            leading: image.isNotEmpty
-                                ? Image.asset(image, width: 40, height: 40)
-                                : const Icon(Icons.card_giftcard, size: 40),
-                            title: Text(title),
-                            subtitle: Text('Стоимость: $cost баллов'),
-                            trailing: ElevatedButton(
-                              onPressed: canExchange
-                                  ? () async {
-                                // 1) Захват провайдера ДО await
-                                final cartProv = Provider.of<CartProvider>(context, listen: false);
-
-                                // 2) Списываем баллы и пишем историю
-                                await FirebaseFirestore.instance
-                                    .collection('users')
-                                    .doc(uid)
-                                    .update({'bonusPoints': FieldValue.increment(-cost)});
-                                await FirebaseFirestore.instance
-                                    .collection('users')
-                                    .doc(uid)
-                                    .collection('rewardHistory')
-                                    .add({
-                                  'rewardId': doc.id,
-                                  'title': title,
-                                  'cost': cost,
-                                  'image': image,
-                                  'exchangedAt': Timestamp.now(),
-                                });
-
-                                // 3) Добавляем в корзину (без нового Provider.of)
-                                cartProv.addRewardItemToCart(
-                                  name: title,
-                                  image: image,
-                                  rewardId: doc.id,
-                                );
-                                print('⚙️ Cart after add: ${cartProv.items}');
-
-                                // 4) Показать SnackBar с кнопкой перехода
-                                if (!mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: const Text('Товар добавлен в корзину'),
-                                    action: SnackBarAction(
-                                      label: 'В корзину',
-                                      onPressed: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(builder: (_) => const CartScreen()),
-                                        );
-                                      },
+                          elevation: 2,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          margin: const EdgeInsets.symmetric(vertical: 8),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            child: Row(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: image.isNotEmpty
+                                      ? Image.asset(image, width: 60, height: 60, fit: BoxFit.cover)
+                                      : const Icon(Icons.card_giftcard, size: 60),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                                      const SizedBox(height: 4),
+                                      Text('Стоимость: $cost баллов',
+                                          style: const TextStyle(color: Colors.grey, fontSize: 14)),
+                                    ],
+                                  ),
+                                ),
+                                ElevatedButton(
+                                  onPressed: canExchange
+                                      ? () async {
+                                    final cartProv = Provider.of<CartProvider>(context, listen: false);
+                                    await FirebaseFirestore.instance
+                                        .collection('users')
+                                        .doc(uid)
+                                        .update({'bonusPoints': FieldValue.increment(-cost)});
+                                    await FirebaseFirestore.instance
+                                        .collection('users')
+                                        .doc(uid)
+                                        .collection('rewardHistory')
+                                        .add({
+                                      'rewardId': doc.id,
+                                      'title': title,
+                                      'cost': cost,
+                                      'image': image,
+                                      'exchangedAt': Timestamp.now(),
+                                    });
+                                    cartProv.addRewardItemToCart(
+                                      name: title,
+                                      image: image,
+                                      rewardId: doc.id,
+                                    );
+                                    if (!mounted) return;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: const Text('Товар добавлен в корзину'),
+                                        action: SnackBarAction(
+                                          label: 'В корзину',
+                                          onPressed: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(builder: (_) => const CartScreen()),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                      : null,
+                                  style: ElevatedButton.styleFrom(
+                                    foregroundColor: Colors.white,
+                                    backgroundColor:
+                                    canExchange ? Colors.redAccent : Colors.grey.shade400,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
                                     ),
                                   ),
-                                );
-                              }
-                                  : null,
-                              child: const Text('Обменять'),
+                                  child: const Text('Обменять'),
+                                ),
+                              ],
                             ),
                           ),
                         );

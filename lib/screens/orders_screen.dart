@@ -19,6 +19,7 @@ class OrdersScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Мои заказы'),
         backgroundColor: Colors.redAccent,
+        elevation: 0,
       ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: FirebaseFirestore.instance
@@ -37,10 +38,16 @@ class OrdersScreen extends StatelessWidget {
           final orders = snapshot.data?.docs ?? [];
 
           if (orders.isEmpty) {
-            return const Center(child: Text('У вас пока нет заказов.'));
+            return const Center(
+              child: Text(
+                'У вас пока нет заказов.',
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+            );
           }
 
           return ListView.builder(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
             itemCount: orders.length,
             itemBuilder: (context, index) {
               final order = orders[index].data();
@@ -53,20 +60,39 @@ class OrdersScreen extends StatelessWidget {
               final color = _statusColor(status);
 
               return Card(
-                margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                elevation: 2,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                margin: const EdgeInsets.only(bottom: 16),
                 child: ExpansionTile(
-                  tilePadding: const EdgeInsets.symmetric(horizontal: 16),
-                  title: Text('Филиал: $branchName'),
-                  subtitle: Text(
-                    'Сумма: $total сом\nСтатус: ${status.toString().toUpperCase()}\nДата: ${timestamp != null ? _formatDate(timestamp) : ''}',
-                    style: TextStyle(color: color),
+                  tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  title: Text(
+                    'Филиал: $branchName',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 4),
+                      Text('Сумма: $total сом', style: const TextStyle(fontSize: 14)),
+                      Text('Статус: ${status.toUpperCase()}', style: TextStyle(color: color, fontSize: 14)),
+                      if (timestamp != null)
+                        Text(
+                          'Дата: ${_formatDate(timestamp)}',
+                          style: const TextStyle(fontSize: 13, color: Colors.grey),
+                        ),
+                    ],
                   ),
                   children: [
-                    ...items.map((item) => ListTile(
-                      title: Text(item['name']),
-                      subtitle: Text('${item['price']} сом'),
-                      leading: Image.asset(item['image'], width: 40, height: 40),
-                    )),
+                    ...items.map(
+                          (item) => ListTile(
+                        leading: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.asset(item['image'], width: 40, height: 40, fit: BoxFit.cover),
+                        ),
+                        title: Text(item['name'], style: const TextStyle(fontSize: 15)),
+                        subtitle: Text('${item['price']} сом', style: const TextStyle(color: Colors.grey)),
+                      ),
+                    ),
                   ],
                 ),
               );
@@ -78,7 +104,8 @@ class OrdersScreen extends StatelessWidget {
   }
 
   String _formatDate(DateTime date) {
-    return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year} '
+        '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   }
 
   Color _statusColor(String status) {

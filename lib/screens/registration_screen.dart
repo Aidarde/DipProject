@@ -1,119 +1,151 @@
-// lib/screens/registration_screen.dart
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
-import 'login_screen.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
+
   @override
-  State<RegistrationScreen> createState() => _RegState();
+  State<RegistrationScreen> createState() => _RegistrationScreenState();
 }
 
-class _RegState extends State<RegistrationScreen> {
+class _RegistrationScreenState extends State<RegistrationScreen> {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
-  final _pass2Ctrl = TextEditingController();
+  final _confirmCtrl = TextEditingController();
   String? _error;
+  bool _loading = false;
 
-  // Простая проверка e-mail
-  bool _isValidEmail(String email) {
-    final pattern = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    return pattern.hasMatch(email);
-  }
+  Future<void> _register() async {
+    setState(() {
+      _error = null;
+      _loading = true;
+    });
 
-  Future<void> _submit() async {
-    final email = _emailCtrl.text.trim();
-    final pass = _passCtrl.text;
-    final pass2 = _pass2Ctrl.text;
-
-    // Валидация до обращения к Firebase
-    if (email.isEmpty || pass.isEmpty || pass2.isEmpty) {
-      setState(() => _error = 'Заполните все поля');
-      return;
-    }
-    if (!_isValidEmail(email)) {
-      setState(() => _error = 'Неверный формат e-mail');
-      return;
-    }
-    if (pass.length < 6) {
-      setState(() => _error = 'Пароль должен быть не менее 6 символов');
-      return;
-    }
-    if (pass != pass2) {
-      setState(() => _error = 'Пароли не совпадают');
-      return;
-    }
-
-    setState(() => _error = null);
-    try {
-      // создаём учётку
-      final user = await AuthService.registerWithEmail(email, pass);
-      if (user == null) throw 'Не удалось зарегистрироваться';
-
-      // сохраняем профиль в Firestore только как user
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .set({
-        'email': email,
-        'role': 'user',
-        'branchName': null,
-        'bonusPoints': 0,
+    if (_passCtrl.text != _confirmCtrl.text) {
+      setState(() {
+        _error = 'Пароли не совпадают';
+        _loading = false;
       });
-
-      // возвращаемся на экран логина
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-      );
-    } on FirebaseAuthException catch (e) {
-      // выводим сообщение от Firebase (например, email-already-in-use)
-      setState(() => _error = e.message);
-    } catch (e) {
-      setState(() => _error = 'Ошибка: $e');
+      return;
     }
+
+    try {
+      final user = await AuthService.registerWithEmail(
+        _emailCtrl.text.trim(),
+        _passCtrl.text,
+      );
+      if (user != null) {
+        Navigator.pop(context); // Вернуться на экран входа
+      }
+    } on FirebaseAuthException catch (e) {
+      setState(() {
+        _error = e.message ?? 'Ошибка регистрации';
+      });
+    } catch (e) {
+      setState(() {
+        _error = 'Непредвиденная ошибка';
+      });
+    }
+
+    setState(() => _loading = false);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Регистрация')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TextField(
-              controller: _emailCtrl,
-              decoration: const InputDecoration(labelText: 'Email'),
-              keyboardType: TextInputType.emailAddress,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _passCtrl,
-              decoration: const InputDecoration(labelText: 'Пароль'),
-              obscureText: true,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _pass2Ctrl,
-              decoration: const InputDecoration(labelText: 'Повторите пароль'),
-              obscureText: true,
-              onSubmitted: (_) => _submit(),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _submit,
-              child: const Text('Зарегистрироваться'),
-            ),
-            if (_error != null) ...[
-              const SizedBox(height: 12),
-              Text(_error!, style: const TextStyle(color: Colors.red)),
+      backgroundColor: const Color(0xFFF5F6FA),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Icon(Icons.person_add_alt_1, size: 72, color: Colors.redAccent),
+              const SizedBox(height: 16),
+              const Text(
+                'Создайте аккаунт',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 32),
+              TextField(
+                controller: _emailCtrl,
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.email),
+                  labelText: 'Email',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                ),
+                keyboardType: TextInputType.emailAddress,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _passCtrl,
+                obscureText: true,
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.lock),
+                  labelText: 'Пароль',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _confirmCtrl,
+                obscureText: true,
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  labelText: 'Повторите пароль',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 24),
+              _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : ElevatedButton(
+                onPressed: _register,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.redAccent,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  'Зарегистрироваться',
+                  style: TextStyle(fontSize: 16),
+                ),
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 16),
+                Text(
+                  _error!,
+                  style: const TextStyle(color: Colors.red),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+              const SizedBox(height: 24),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Уже есть аккаунт? Войти'),
+              ),
             ],
-          ],
+          ),
         ),
       ),
     );

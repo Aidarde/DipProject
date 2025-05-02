@@ -13,14 +13,12 @@ class HomeScreen extends StatelessWidget {
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
     final branchName = branchProvider.selectedBranch;
 
-    // Промо-баннеры (в реальности можно подгружать из Firestore)
     final promotions = <String>[
       'assets/banners/promo1.png',
       'assets/banners/promo2.png',
       'assets/banners/promo3.png',
     ];
 
-    // Популярные блюда
     final popular = <Map<String, Object>>[
       {
         'name': 'Чизбургер',
@@ -43,39 +41,50 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Главная'),
         backgroundColor: Colors.redAccent,
+        elevation: 0,
       ),
       body: ListView(
+        padding: const EdgeInsets.only(bottom: 24),
         children: <Widget>[
-          // 1) Карусель промо
+          const SizedBox(height: 12),
+
+          // Карусель
           SizedBox(
             height: 160,
-            child: PageView(
-              children: promotions.map((path) {
+            child: PageView.builder(
+              itemCount: promotions.length,
+              controller: PageController(viewportFraction: 0.9),
+              itemBuilder: (context, index) {
                 return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.asset(path, fit: BoxFit.cover),
+                    borderRadius: BorderRadius.circular(16),
+                    child: Image.asset(promotions[index], fit: BoxFit.cover),
                   ),
                 );
-              }).toList(),
+              },
             ),
           ),
-          const SizedBox(height: 16),
 
-          // 2) Заголовок "Популярное"
+          const SizedBox(height: 24),
+
+          // Популярное
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              'Популярное',
-              style: Theme.of(context).textTheme.titleLarge,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Популярное',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
 
-          // 3) Горизонтальный список популярных блюд
           SizedBox(
-            height: 200, // увеличили высоту, чтобы избежать overflow
+            height: 220,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -86,53 +95,62 @@ class HomeScreen extends StatelessWidget {
                 final price = item['price'] as int;
                 final image = item['image'] as String;
 
-                return Card(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                return Container(
+                  width: 150,
+                  margin: const EdgeInsets.only(right: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      )
+                    ],
                   ),
-                  margin: const EdgeInsets.only(right: 12, bottom: 4), // отступ снизу
-                  child: SizedBox(
-                    width: 140,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min, // занимает только нужный размер
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: <Widget>[
-                        Image.asset(image, width: 80, height: 80),
-                        const SizedBox(height: 8),
-                        Text(
-                          name,
-                          textAlign: TextAlign.center,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      const SizedBox(height: 12),
+                      Image.asset(image, width: 72, height: 72),
+                      const SizedBox(height: 8),
+                      Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                      Text('$price сом', style: const TextStyle(color: Colors.grey)),
+                      const SizedBox(height: 6),
+                      ElevatedButton(
+                        onPressed: () {
+                          cartProvider.addItem(
+                            name: name,
+                            price: price,
+                            image: image,
+                          );
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('$name добавлен в корзину')),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.redAccent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          minimumSize: const Size(40, 36),
+                          padding: EdgeInsets.zero,
                         ),
-                        Text('$price сом'),
-                        const SizedBox(height: 4),
-                        IconButton(
-                          icon: const Icon(Icons.add_shopping_cart),
-                          onPressed: () {
-                            cartProvider.addItem(
-                              name: name,
-                              price: price,
-                              image: image,
-                            );
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('$name добавлен в корзину'),
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
+                        child: const Icon(Icons.add_shopping_cart, size: 18),
+                      ),
+                    ],
                   ),
                 );
               },
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 32),
 
-          // 4) Кнопка "Смотреть всё меню"
+          // Кнопка меню
           Center(
-            child: ElevatedButton(
+            child: ElevatedButton.icon(
               onPressed: () {
                 Navigator.push(
                   context,
@@ -141,11 +159,18 @@ class HomeScreen extends StatelessWidget {
                   ),
                 );
               },
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-              child: const Text('Смотреть всё меню'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              icon: const Icon(Icons.restaurant_menu),
+              label: const Text(
+                'Смотреть всё меню',
+                style: TextStyle(fontSize: 16),
+              ),
             ),
           ),
-          const SizedBox(height: 16),
         ],
       ),
     );

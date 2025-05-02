@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
 import '../providers/user_provider.dart';
 import '../services/auth_service.dart';
 
@@ -14,14 +13,13 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  final _nameCtrl  = TextEditingController();
+  final _nameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   bool _saving = false;
 
   @override
   void initState() {
     super.initState();
-    // инициализируем поля из провайдера
     final user = Provider.of<UserProvider>(context, listen: false).user;
     if (user != null) {
       _nameCtrl.text = user.displayName ?? '';
@@ -41,21 +39,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final uid = FirebaseAuth.instance.currentUser!.uid;
     final data = {
       'displayName': _nameCtrl.text.trim(),
-      'phone':       _phoneCtrl.text.trim(),
+      'phone': _phoneCtrl.text.trim(),
     };
     try {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .update(data);
-      // Обновляем провайдер
+      await FirebaseFirestore.instance.collection('users').doc(uid).update(data);
       await Provider.of<UserProvider>(context, listen: false).loadUser(uid);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Профиль сохранён'))
+        const SnackBar(content: Text('Профиль сохранён')),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка сохранения: $e'))
+        SnackBar(content: Text('Ошибка сохранения: $e')),
       );
     }
     setState(() => _saving = false);
@@ -69,56 +65,76 @@ class _SettingsScreenState extends State<SettingsScreen> {
       appBar: AppBar(
         title: const Text('Личный кабинет'),
         backgroundColor: Colors.redAccent,
+        elevation: 0,
       ),
       body: user == null
           ? const Center(child: CircularProgressIndicator())
-          : Padding(
+          : SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             CircleAvatar(
-              radius: 40,
+              radius: 48,
               backgroundImage: (user.photoURL != null && user.photoURL!.isNotEmpty)
                   ? NetworkImage(user.photoURL!)
                   : const AssetImage('assets/default_avatar.png') as ImageProvider,
             ),
             const SizedBox(height: 16),
+            Text(
+              user.email ?? 'Нет адреса почты',
+              style: const TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+            const SizedBox(height: 24),
             TextField(
               controller: _nameCtrl,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Имя',
-                border: OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.person_outline),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             TextField(
               controller: _phoneCtrl,
-              decoration: const InputDecoration(
+              keyboardType: TextInputType.phone,
+              decoration: InputDecoration(
                 labelText: 'Телефон',
-                border: OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.phone),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
             const SizedBox(height: 24),
             _saving
                 ? const CircularProgressIndicator()
-                : ElevatedButton(
+                : ElevatedButton.icon(
               onPressed: _saveProfile,
+              icon: const Icon(Icons.save),
+              label: const Text('Сохранить'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.redAccent,
-                minimumSize: const Size(double.infinity, 48),
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-              child: const Text('Сохранить'),
             ),
-            const Spacer(),
+            const SizedBox(height: 40),
+            Divider(color: Colors.grey.shade300, thickness: 1),
+            const SizedBox(height: 20),
             ElevatedButton.icon(
               onPressed: () async {
                 await AuthService.signOut();
               },
               icon: const Icon(Icons.logout),
-              label: const Text('Выйти'),
+              label: const Text('Выйти из аккаунта'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey,
+                backgroundColor: Colors.grey.shade600,
+                foregroundColor: Colors.white,
                 minimumSize: const Size(double.infinity, 48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ],
