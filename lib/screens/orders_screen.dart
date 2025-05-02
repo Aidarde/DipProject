@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:enjoy/theme/app_colors.dart';
+import 'package:enjoy/theme/app_styles.dart';
 
 class OrdersScreen extends StatelessWidget {
   const OrdersScreen({super.key});
@@ -17,10 +19,11 @@ class OrdersScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Мои заказы'),
-        backgroundColor: Colors.redAccent,
+        title: const Text('Мои заказы', style: AppStyles.appBarTitle),
+        backgroundColor: AppColors.primaryRed,
         elevation: 0,
       ),
+      backgroundColor: AppColors.background,
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: FirebaseFirestore.instance
             .collection('orders')
@@ -29,10 +32,10 @@ class OrdersScreen extends StatelessWidget {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator(color: AppColors.primaryRed));
           }
           if (snapshot.hasError) {
-            return Center(child: Text('Ошибка загрузки: ${snapshot.error}'));
+            return Center(child: Text('Ошибка загрузки: ${snapshot.error}', style: AppStyles.errorText));
           }
 
           final orders = snapshot.data?.docs ?? [];
@@ -41,13 +44,13 @@ class OrdersScreen extends StatelessWidget {
             return const Center(
               child: Text(
                 'У вас пока нет заказов.',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
+                style: AppStyles.cardPrice,
               ),
             );
           }
 
           return ListView.builder(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+            padding: const EdgeInsets.all(16),
             itemCount: orders.length,
             itemBuilder: (context, index) {
               final order = orders[index].data();
@@ -59,26 +62,38 @@ class OrdersScreen extends StatelessWidget {
 
               final color = _statusColor(status);
 
-              return Card(
-                elevation: 2,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              return Container(
                 margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: AppColors.cardBackground,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
                 child: ExpansionTile(
                   tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   title: Text(
                     'Филиал: $branchName',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: AppStyles.cardTitle,
                   ),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 4),
-                      Text('Сумма: $total сом', style: const TextStyle(fontSize: 14)),
-                      Text('Статус: ${status.toUpperCase()}', style: TextStyle(color: color, fontSize: 14)),
+                      Text('Сумма: $total сом', style: AppStyles.cardPrice),
+                      Text(
+                        'Статус: ${status.toUpperCase()}',
+                        style: AppStyles.cardPrice.copyWith(color: color, fontWeight: FontWeight.w600),
+                      ),
                       if (timestamp != null)
                         Text(
                           'Дата: ${_formatDate(timestamp)}',
-                          style: const TextStyle(fontSize: 13, color: Colors.grey),
+                          style: AppStyles.cardPrice.copyWith(fontSize: 12),
                         ),
                     ],
                   ),
@@ -89,8 +104,8 @@ class OrdersScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                           child: Image.asset(item['image'], width: 40, height: 40, fit: BoxFit.cover),
                         ),
-                        title: Text(item['name'], style: const TextStyle(fontSize: 15)),
-                        subtitle: Text('${item['price']} сом', style: const TextStyle(color: Colors.grey)),
+                        title: Text(item['name'], style: AppStyles.cardTitle.copyWith(fontSize: 15)),
+                        subtitle: Text('${item['price']} сом', style: AppStyles.cardPrice),
                       ),
                     ),
                   ],
@@ -115,9 +130,9 @@ class OrdersScreen extends StatelessWidget {
       case 'в обработке':
         return Colors.blue;
       case 'готов':
-        return Colors.green;
+        return AppColors.success;
       case 'выдан':
-        return Colors.grey;
+        return AppColors.greyText;
       default:
         return Colors.black;
     }

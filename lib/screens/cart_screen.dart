@@ -1,11 +1,11 @@
-import 'package:enjoy/providers/user_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../providers/cart_provider.dart';
-
-
+import '../providers/user_provider.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_styles.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -27,7 +27,11 @@ class _CartScreenState extends State<CartScreen> {
     final user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Корзина'), backgroundColor: Colors.redAccent),
+      appBar: AppBar(
+        title: const Text('Корзина', style: AppStyles.appBarTitle),
+        backgroundColor: AppColors.primaryRed,
+        elevation: 0,
+      ),
       body: Column(
         children: [
           Padding(
@@ -38,9 +42,7 @@ class _CartScreenState extends State<CartScreen> {
                 border: OutlineInputBorder(),
               ),
               value: _selectedBranch,
-              items: _branches
-                  .map((b) => DropdownMenuItem(value: b, child: Text(b)))
-                  .toList(),
+              items: _branches.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
               onChanged: (val) => setState(() => _selectedBranch = val),
             ),
           ),
@@ -52,9 +54,12 @@ class _CartScreenState extends State<CartScreen> {
               itemBuilder: (ctx, i) {
                 final item = cart.items[i];
                 return ListTile(
-                  leading: Image.asset(item['image'], width: 50),
-                  title: Text(item['name']),
-                  subtitle: Text('${item['price']} сом'),
+                  leading: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.asset(item['image'], width: 50, height: 50, fit: BoxFit.cover),
+                  ),
+                  title: Text(item['name'], style: AppStyles.cardTitle),
+                  subtitle: Text('${item['price']} сом', style: AppStyles.cardPrice),
                   trailing: IconButton(
                     icon: const Icon(Icons.delete),
                     onPressed: () => cart.removeItem(i),
@@ -66,8 +71,11 @@ class _CartScreenState extends State<CartScreen> {
         ],
       ),
       bottomNavigationBar: Container(
-        color: Colors.white,
         padding: const EdgeInsets.all(16),
+        decoration: const BoxDecoration(
+          color: AppColors.background,
+          border: Border(top: BorderSide(color: AppColors.lightGrey)),
+        ),
         child: Row(
           children: [
             Expanded(
@@ -92,30 +100,28 @@ class _CartScreenState extends State<CartScreen> {
                   'status': 'в обработке',
                 };
 
-                // Сохраняем заказ
-                await FirebaseFirestore.instance
-                    .collection('orders')
-                    .add(orderData);
-
-                // Начисляем бонусы
+                await FirebaseFirestore.instance.collection('orders').add(orderData);
                 await FirebaseFirestore.instance
                     .collection('users')
                     .doc(user.uid)
                     .update({'bonusPoints': FieldValue.increment(earned)});
-
-                // Обновляем UserProvider
-                await Provider.of<UserProvider>(context, listen: false)
-                    .loadUser(user.uid);
+                await Provider.of<UserProvider>(context, listen: false).loadUser(user.uid);
 
                 cart.clearCart();
 
+                if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('Заказ оформлен. +$earned баллов!')),
                 );
                 Navigator.pop(context);
               },
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-              child: const Text('Оформить'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryRed,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Оформить', style: AppStyles.buttonText),
             ),
           ],
         ),
@@ -123,4 +129,3 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 }
-

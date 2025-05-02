@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../providers/user_provider.dart';
 import '../services/auth_service.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_styles.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -62,56 +65,80 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final user = Provider.of<UserProvider>(context).user;
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Личный кабинет'),
-        backgroundColor: Colors.redAccent,
+        title: const Text('Личный кабинет', style: AppStyles.appBarTitle),
+        backgroundColor: AppColors.primaryRed,
         elevation: 0,
+        centerTitle: true,
       ),
       body: user == null
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           children: [
+            /// Аватар
             CircleAvatar(
               radius: 48,
+              backgroundColor: AppColors.lightGrey,
               backgroundImage: (user.photoURL != null && user.photoURL!.isNotEmpty)
                   ? NetworkImage(user.photoURL!)
                   : const AssetImage('assets/default_avatar.png') as ImageProvider,
             ),
             const SizedBox(height: 16),
+
+            /// Email
             Text(
               user.email ?? 'Нет адреса почты',
-              style: const TextStyle(fontSize: 16, color: Colors.grey),
+              style: AppStyles.cardPrice,
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
+
+            /// Имя
             TextField(
               controller: _nameCtrl,
               decoration: InputDecoration(
                 labelText: 'Имя',
-                prefixIcon: const Icon(Icons.person_outline),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                labelStyle: AppStyles.inputLabel,
+                prefixIcon: const Icon(Icons.person_outline, color: AppColors.greyText),
+                filled: true,
+                fillColor: AppColors.lightGrey,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
               ),
             ),
             const SizedBox(height: 16),
+
+            /// Телефон
             TextField(
               controller: _phoneCtrl,
               keyboardType: TextInputType.phone,
               decoration: InputDecoration(
                 labelText: 'Телефон',
-                prefixIcon: const Icon(Icons.phone),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                labelStyle: AppStyles.inputLabel,
+                prefixIcon: const Icon(Icons.phone, color: AppColors.greyText),
+                filled: true,
+                fillColor: AppColors.lightGrey,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 28),
+
+            /// Кнопка сохранить
             _saving
                 ? const CircularProgressIndicator()
                 : ElevatedButton.icon(
               onPressed: _saveProfile,
               icon: const Icon(Icons.save),
-              label: const Text('Сохранить'),
+              label: const Text('Сохранить', style: AppStyles.buttonText),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
+                backgroundColor: AppColors.primaryRed,
                 foregroundColor: Colors.white,
                 minimumSize: const Size(double.infinity, 50),
                 shape: RoundedRectangleBorder(
@@ -119,17 +146,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
             ),
+
             const SizedBox(height: 40),
-            Divider(color: Colors.grey.shade300, thickness: 1),
+            Divider(color: AppColors.lightGrey, thickness: 1),
             const SizedBox(height: 20),
+
+            /// Кнопка выйти
             ElevatedButton.icon(
               onPressed: () async {
                 await AuthService.signOut();
               },
               icon: const Icon(Icons.logout),
-              label: const Text('Выйти из аккаунта'),
+              label: const Text('Выйти из аккаунта', style: AppStyles.buttonText),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey.shade600,
+                backgroundColor: AppColors.greyText,
                 foregroundColor: Colors.white,
                 minimumSize: const Size(double.infinity, 48),
                 shape: RoundedRectangleBorder(
