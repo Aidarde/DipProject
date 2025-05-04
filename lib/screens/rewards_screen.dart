@@ -1,15 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:enjoy/screens/cart_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../providers/user_provider.dart';
 import '../providers/cart_provider.dart';
-import '../theme/app_colors.dart';
 import '../theme/app_styles.dart';
+import '../theme/app_colors.dart';
+import '../l10n/l10n_ext.dart';
+import 'cart_screen.dart';
 
 class RewardsScreen extends StatefulWidget {
   const RewardsScreen({super.key});
-
   @override
   State<RewardsScreen> createState() => _RewardsScreenState();
 }
@@ -18,64 +19,38 @@ class _RewardsScreenState extends State<RewardsScreen> {
   @override
   void initState() {
     super.initState();
-    final uid = Provider.of<UserProvider>(context, listen: false).user?.uid;
-    if (uid != null) {
-      Provider.of<UserProvider>(context, listen: false).loadUser(uid);
-    }
+    final uid = context.read<UserProvider>().user?.uid;
+    if (uid != null) context.read<UserProvider>().loadUser(uid);
   }
 
   @override
   Widget build(BuildContext context) {
-    final userProvider = Provider.of<UserProvider>(context);
-    if (userProvider.isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator(color: AppColors.primaryRed)),
-      );
-    }
-
-    final appUser = userProvider.user;
+    final appUser = context.watch<UserProvider>().user;
     if (appUser == null) {
-      return const Scaffold(
-        body: Center(child: Text('Пользователь не найден', style: AppStyles.errorText)),
-      );
+      return Scaffold(body: Center(child: Text(context.l10n.userNotFound)));
     }
 
     final uid = appUser.uid;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Бонусы', style: AppStyles.appBarTitle),
-        backgroundColor: AppColors.primaryRed,
-        elevation: 0,
-      ),
-      backgroundColor: AppColors.background,
+      appBar: AppBar(title: Text(context.l10n.rewardsTab, style: AppStyles.appBarTitle)),
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         stream: FirebaseFirestore.instance.collection('users').doc(uid).snapshots(),
-        builder: (context, userSnap) {
+        builder: (_, userSnap) {
           if (userSnap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: AppColors.primaryRed));
+            return const Center(child: CircularProgressIndicator());
           }
-          if (!userSnap.hasData || !userSnap.data!.exists) {
-            return const Center(
-              child: Text('Не удалось загрузить данные пользователя', style: AppStyles.errorText),
-            );
-          }
-
-          final bonusPoints = (userSnap.data!.data()!['bonusPoints'] as int?) ?? 0;
+          final bonus = (userSnap.data?.data()?['bonusPoints'] as int?) ?? 0;
 
           return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
+              Padding(
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
                     const Icon(Icons.star, color: Colors.amber, size: 28),
                     const SizedBox(width: 8),
-                    Text(
-                      'Ваши баллы: $bonusPoints',
-                      style: AppStyles.sectionTitle,
-                    ),
+                    Text(context.l10n.yourPoints(bonus), style: AppStyles.sectionTitle),
                   ],
                 ),
               ),
@@ -85,44 +60,47 @@ class _RewardsScreenState extends State<RewardsScreen> {
                       .collection('rewards')
                       .orderBy('cost')
                       .snapshots(),
-                  builder: (context, rewardsSnap) {
-                    if (rewardsSnap.connectionState == ConnectionState.waiting) {
+                  builder: (_, snap) {
+                    if (snap.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
                     }
-                    if (rewardsSnap.hasError) {
-                      return Center(child: Text('Ошибка: ${rewardsSnap.error}', style: AppStyles.errorText));
+                    if (snap.hasError) {
+                      return Center(child: Text(context.l10n.errorLoading('${snap.error}')));
                     }
 
-                    final rewards = rewardsSnap.data!.docs;
+                    final rewards = snap.data!.docs;
                     if (rewards.isEmpty) {
-                      return const Center(
-                        child: Text('Наград пока нет', style: AppStyles.cardPrice),
+                      return Center(
+                        child: Text(context.l10n.noRewardsYet,
+                            style: AppStyles.cardPrice),
                       );
                     }
 
                     return ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       itemCount: rewards.length,
-                      itemBuilder: (context, index) {
-                        final doc = rewards[index];
-                        final data = doc.data();
-                        final title = data['name'] as String? ?? 'Без названия';
-                        final cost = data['cost'] as int? ?? 0;
-                        final image = data['image'] as String? ?? '';
-                        final canExchange = bonusPoints >= cost;
+                      itemBuilder: (_, i) {
+                        final doc   = rewards[i];
+                        final data  = doc.data();
+
+                        final title = (data['name']  as String?) ?? '–';
+                        final cost  = (data['cost']  as num?)?.round() ?? 0;
+                        final image = (data['image'] as String?) ?? '';
+                        final can   = bonus >= cost;
 
                         return Container(
                           margin: const EdgeInsets.symmetric(vertical: 8),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: AppColors.cardBackground,
+                            color: Theme.of(context).colorScheme.surface,
                             borderRadius: BorderRadius.circular(16),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
+                                color: Colors.black.withOpacity(.05),
                                 blurRadius: 6,
                                 offset: const Offset(0, 4),
-                              ),
+                              )
                             ],
                           ),
                           child: Row(
@@ -130,8 +108,10 @@ class _RewardsScreenState extends State<RewardsScreen> {
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(8),
                                 child: image.isNotEmpty
-                                    ? Image.asset(image, width: 60, height: 60, fit: BoxFit.cover)
-                                    : const Icon(Icons.card_giftcard, size: 60, color: AppColors.primaryRed),
+                                    ? Image.asset(image,
+                                    width: 60, height: 60, fit: BoxFit.cover)
+                                    : const Icon(Icons.card_giftcard,
+                                    size: 60, color: AppColors.red),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -140,18 +120,24 @@ class _RewardsScreenState extends State<RewardsScreen> {
                                   children: [
                                     Text(title, style: AppStyles.cardTitle),
                                     const SizedBox(height: 4),
-                                    Text('Стоимость: $cost баллов', style: AppStyles.cardPrice),
+                                    Text(context.l10n.cost(cost),
+                                        style: AppStyles.cardPrice),
                                   ],
                                 ),
                               ),
-                              ElevatedButton(
-                                onPressed: canExchange
+                              FilledButton(
+                                onPressed: can
                                     ? () async {
-                                  final cartProv = Provider.of<CartProvider>(context, listen: false);
+                                  final cart = context.read<CartProvider>();
+
                                   await FirebaseFirestore.instance
                                       .collection('users')
                                       .doc(uid)
-                                      .update({'bonusPoints': FieldValue.increment(-cost)});
+                                      .update({
+                                    'bonusPoints':
+                                    FieldValue.increment(-cost)
+                                  });
+
                                   await FirebaseFirestore.instance
                                       .collection('users')
                                       .doc(uid)
@@ -163,37 +149,32 @@ class _RewardsScreenState extends State<RewardsScreen> {
                                     'image': image,
                                     'exchangedAt': Timestamp.now(),
                                   });
-                                  cartProv.addRewardItemToCart(
-                                    name: title,
-                                    image: image,
-                                    rewardId: doc.id,
-                                  );
+
+                                  cart.addRewardItemToCart(
+                                      name: title,
+                                      image: image,
+                                      rewardId: doc.id);
+
                                   if (!mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  ScaffoldMessenger.of(context)
+                                      .showSnackBar(
                                     SnackBar(
-                                      content: const Text('Товар добавлен в корзину'),
+                                      content: Text(
+                                          context.l10n.addedToCart(title)),
                                       action: SnackBarAction(
-                                        label: 'В корзину',
-                                        onPressed: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(builder: (_) => const CartScreen()),
-                                          );
-                                        },
+                                        label: context.l10n.goToCart,
+                                        onPressed: () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (_) =>
+                                              const CartScreen()),
+                                        ),
                                       ),
                                     ),
                                   );
                                 }
                                     : null,
-                                style: ElevatedButton.styleFrom(
-                                  foregroundColor: Colors.white,
-                                  backgroundColor:
-                                  canExchange ? AppColors.primaryRed : Colors.grey.shade400,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                ),
-                                child: const Text('Обменять'),
+                                child: Text(context.l10n.exchange),
                               ),
                             ],
                           ),

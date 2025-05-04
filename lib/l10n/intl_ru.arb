@@ -1,0 +1,116 @@
+{
+  "@@locale": "ru",
+
+  "language": "Язык",
+
+  "homeTab":     "Главная",
+  "ordersTab":   "Заказы",
+  "rewardsTab":  "Бонусы",
+  "settingsTab": "Настройки",
+
+  "popular":  "Популярное",
+  "viewMenu": "Смотреть всё меню",
+
+  "addedToCart": "{item} добавлен в корзину",
+  "@addedToCart": {
+    "placeholders": { "item": { "type": "String" } }
+  },
+
+  "branch": "Филиал: {branch}",
+  "@branch": {
+    "placeholders": { "branch": { "type": "String" } }
+  },
+
+  "amount": "Сумма: {amount} сом",
+  "@amount": {
+    "placeholders": { "amount": { "type": "int" } }
+  },
+
+  "status": "Статус: {status}",
+  "@status": {
+    "placeholders": { "status": { "type": "String" } }
+  },
+
+  "date": "Дата: {date}",
+  "@date": {
+    "placeholders": { "date": { "type": "String" } }
+  },
+
+  "userNotFound": "Пользователь не найден",
+
+  "errorLoading": "Ошибка: {error}",
+  "@errorLoading": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+
+  "noOrdersYet": "У вас пока нет заказов.",
+
+
+  "yourPoints": "Ваши баллы: {points}",
+  "@yourPoints": {
+    "placeholders": { "points": { "type": "int" } }
+  },
+
+  "cost": "Стоимость: {cost} баллов",
+  "@cost": {
+    "placeholders": { "cost": { "type": "int" } }
+  },
+
+  "noRewardsYet": "Наград пока нет",
+  "exchange":     "Обменять",
+  "goToCart":     "В корзину",
+
+
+  "cartTitle":    "Корзина",
+  "chooseBranch": "Выберите филиал",
+  "cartEmpty":    "Корзина пуста",
+
+  "total": "Итого: {total} сом",
+  "@total": {
+    "placeholders": { "total": { "type": "int" } }
+  },
+
+  "checkout": "Оформить",
+
+  "orderPlaced": "Заказ оформлен. +{points} баллов!",
+  "@orderPlaced": {
+    "placeholders": { "points": { "type": "int" } }
+  },
+
+
+  "menuTitle": "Меню",
+
+
+  "welcome":        "Добро пожаловать!",
+  "email":          "Email",
+  "password":       "Пароль",
+  "loginEmail":     "Войти по Email",
+  "loginGoogle":    "Войти через Google",
+  "noAccount":      "Нет аккаунта? Зарегистрироваться",
+  "unexpectedError":"Непредвиденная ошибка",
+
+
+  "createAccount":  "Создайте аккаунт",
+  "repeatPassword": "Повторите пароль",
+  "register":       "Зарегистрироваться",
+  "passMismatch":   "Пароли не совпадают",
+  "haveAccount":    "Уже есть аккаунт? Войти",
+
+
+  "profileSaved": "Профиль сохранён",
+
+  "saveError": "Ошибка сохранения: {error}",
+  "@saveError": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+
+
+  "darkMode": "Тёмная тема",
+  "logout":   "Выйти из аккаунта",
+  "name":     "Имя",
+  "phone":    "Телефон",
+  "save":     "Сохранить",
+  "noEmail":  "Нет адреса почты",
+
+  "som": "сом"
+}

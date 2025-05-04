@@ -4,9 +4,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../providers/user_provider.dart';
+import '../providers/theme_provider.dart';
+import '../providers/locale_provider.dart';
 import '../services/auth_service.dart';
-import '../theme/app_colors.dart';
 import '../theme/app_styles.dart';
+import '../l10n/l10n_ext.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -16,45 +18,35 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  final _nameCtrl = TextEditingController();
-  final _phoneCtrl = TextEditingController();
-  bool _saving = false;
+  final _name  = TextEditingController();
+  final _phone = TextEditingController();
+  bool  _saving = false;
 
   @override
   void initState() {
     super.initState();
-    final user = Provider.of<UserProvider>(context, listen: false).user;
-    if (user != null) {
-      _nameCtrl.text = user.displayName ?? '';
-      _phoneCtrl.text = user.phone ?? '';
-    }
+    final u = context.read<UserProvider>().user;
+    _name.text  = u?.displayName ?? '';
+    _phone.text = u?.phone ?? '';
   }
 
-  @override
-  void dispose() {
-    _nameCtrl.dispose();
-    _phoneCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _saveProfile() async {
+  Future<void> _save() async {
     setState(() => _saving = true);
     final uid = FirebaseAuth.instance.currentUser!.uid;
-    final data = {
-      'displayName': _nameCtrl.text.trim(),
-      'phone': _phoneCtrl.text.trim(),
-    };
     try {
-      await FirebaseFirestore.instance.collection('users').doc(uid).update(data);
-      await Provider.of<UserProvider>(context, listen: false).loadUser(uid);
+      await FirebaseFirestore.instance.collection('users').doc(uid).update({
+        'displayName': _name.text.trim(),
+        'phone': _phone.text.trim(),
+      });
+      await context.read<UserProvider>().loadUser(uid);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Профиль сохранён')),
+        SnackBar(content: Text(context.l10n.profileSaved)),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка сохранения: $e')),
+        SnackBar(content: Text(context.l10n.saveError('$e'))),
       );
     }
     setState(() => _saving = false);
@@ -62,113 +54,109 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = Provider.of<UserProvider>(context).user;
+    final themeProv  = context.watch<ThemeProvider>();
+    final localeProv = context.watch<LocaleProvider>();
+    final user       = context.watch<UserProvider>().user;
+    if (user == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    final surface = Theme.of(context).colorScheme.surface;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Личный кабинет', style: AppStyles.appBarTitle),
-        backgroundColor: AppColors.primaryRed,
-        elevation: 0,
-        centerTitle: true,
-      ),
-      body: user == null
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
+      appBar: AppBar(title: Text(context.l10n.settingsTab, style: AppStyles.appBarTitle)),
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            /// Аватар
             CircleAvatar(
               radius: 48,
-              backgroundColor: AppColors.lightGrey,
-              backgroundImage: (user.photoURL != null && user.photoURL!.isNotEmpty)
+              backgroundColor: surface,
+              backgroundImage: (user.photoURL?.isNotEmpty ?? false)
                   ? NetworkImage(user.photoURL!)
                   : const AssetImage('assets/default_avatar.png') as ImageProvider,
             ),
             const SizedBox(height: 16),
-
-            /// Email
-            Text(
-              user.email ?? 'Нет адреса почты',
-              style: AppStyles.cardPrice,
-            ),
+            Text(user.email ?? context.l10n.noEmail, style: AppStyles.cardPrice),
             const SizedBox(height: 32),
 
-            /// Имя
-            TextField(
-              controller: _nameCtrl,
-              decoration: InputDecoration(
-                labelText: 'Имя',
-                labelStyle: AppStyles.inputLabel,
-                prefixIcon: const Icon(Icons.person_outline, color: AppColors.greyText),
-                filled: true,
-                fillColor: AppColors.lightGrey,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
+            _input(_name,  context.l10n.name),
             const SizedBox(height: 16),
-
-            /// Телефон
-            TextField(
-              controller: _phoneCtrl,
-              keyboardType: TextInputType.phone,
-              decoration: InputDecoration(
-                labelText: 'Телефон',
-                labelStyle: AppStyles.inputLabel,
-                prefixIcon: const Icon(Icons.phone, color: AppColors.greyText),
-                filled: true,
-                fillColor: AppColors.lightGrey,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
+            _input(_phone, context.l10n.phone, TextInputType.phone),
             const SizedBox(height: 28),
 
-            /// Кнопка сохранить
             _saving
                 ? const CircularProgressIndicator()
-                : ElevatedButton.icon(
-              onPressed: _saveProfile,
+                : FilledButton.icon(
               icon: const Icon(Icons.save),
-              label: const Text('Сохранить', style: AppStyles.buttonText),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryRed,
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
+              label: Text(context.l10n.save, style: AppStyles.buttonText),
+              onPressed: _save,
             ),
 
             const SizedBox(height: 40),
-            Divider(color: AppColors.lightGrey, thickness: 1),
+            Divider(color: Theme.of(context).dividerColor),
             const SizedBox(height: 20),
 
-            /// Кнопка выйти
-            ElevatedButton.icon(
-              onPressed: () async {
-                await AuthService.signOut();
-              },
-              icon: const Icon(Icons.logout),
-              label: const Text('Выйти из аккаунта', style: AppStyles.buttonText),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.greyText,
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+            // Переключатель темы
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(children: [
+                  const Icon(Icons.dark_mode),
+                  const SizedBox(width: 12),
+                  Text(context.l10n.darkMode, style: AppStyles.cardTitle),
+                ]),
+                Switch(
+                  value: themeProv.isDarkMode,
+                  onChanged: (_) => themeProv.toggleTheme(),
                 ),
-              ),
+              ],
+            ),
+
+            const SizedBox(height: 24),
+
+            // Выбор языка
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(children: [
+                  const Icon(Icons.language),
+                  const SizedBox(width: 12),
+                  Text(context.l10n.language, style: AppStyles.cardTitle),
+                ]),
+                DropdownButton<Locale>(
+                  value: localeProv.locale,
+                  items: const [
+                    DropdownMenuItem(value: Locale('ru'), child: Text('Русский')),
+                    DropdownMenuItem(value: Locale('ky'), child: Text('Кыргызча')),
+                  ],
+                  onChanged: (loc) => context.read<LocaleProvider>().setLocale(loc!),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              icon: const Icon(Icons.logout),
+              label: Text(context.l10n.logout, style: AppStyles.buttonText),
+              onPressed: () => AuthService.signOut(),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _input(TextEditingController c, String label,
+      [TextInputType type = TextInputType.text]) {
+    return TextField(
+      controller: c,
+      keyboardType: type,
+      decoration: InputDecoration(
+        labelText: label,
+        filled: true,
+        fillColor: Theme.of(context).colorScheme.surface,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }

@@ -1,13 +1,24 @@
+// McDonald's-style palette + нейтральные оттенки
 import 'package:flutter/material.dart';
 
 class AppColors {
-  static const Color primaryRed = Color(0xFFE4002B);       // основной красный
-  static const Color accentYellow = Color(0xFFFFBC00);     // жёлтый акцент
-  static const Color background = Color(0xFFFDFDFD);        // светлый фон
-  static const Color cardBackground = Color(0xFFFFFFFF);    // фон карточек
-  static const Color greyText = Color(0xFF888888);          // приглушённый текст
-  static const Color darkText = Color(0xFF222222);          // основной текст
-  static const Color lightGrey = Color(0xFFF3F3F3);         // фон для разделителей
-  static const Color success = Color(0xFF4CAF50);           // зелёный (например, для "в корзине")
-  static const Color error = Color(0xFFDD3333);             // для ошибок
+  // Брендовые
+  static const red      = Color(0xFFD71921); // Golden Arches Red
+  static const yellow   = Color(0xFFFFC72C); // Golden Arches Yellow
+
+  // Светлая тема
+  static const lightBg          = Colors.white;
+  static const lightCard        = Color(0xFFF5F5F5);
+  static const lightText        = Color(0xFF101010);
+  static const lightGreyText    = Color(0xFF707070);
+
+  // Тёмная тема
+  static const darkBg           = Color(0xFF121212);
+  static const darkCard         = Color(0xFF1E1E1E);
+  static const darkText         = Colors.white;
+  static const darkGreyText     = Color(0xFFAAAAAA);
+  static const surfaceLight = Color(0xFFF5F5F5);
+
+  static const cardBackground = surfaceLight;
+  static const success        = Color(0xFF23A657);
 }

@@ -1,132 +1,79 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:enjoy/providers/cart_provider.dart';
-import 'package:enjoy/providers/branch_provider.dart';
-import 'package:enjoy/screens/menu_screen.dart';
-import 'package:enjoy/theme/app_colors.dart';
-import 'package:enjoy/theme/app_styles.dart';
+
+import '../providers/cart_provider.dart';
+import '../providers/branch_provider.dart';
+import '../l10n/l10n_ext.dart';
+import '../theme/app_styles.dart';
+import 'menu_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final branchProvider = Provider.of<BranchProvider>(context);
-    final cartProvider = Provider.of<CartProvider>(context, listen: false);
-    final branchName = branchProvider.selectedBranch;
+    final branchName = context.watch<BranchProvider>().selectedBranch;
+    final cart       = context.read<CartProvider>();
 
-    final promotions = [
+    final promos = [
       'assets/banners/promo1.png',
       'assets/banners/promo2.png',
-      'assets/banners/promo3.png',
+      'assets/banners/promo3.png'
     ];
 
     final popular = [
-      {
-        'name': 'Чизбургер',
-        'price': 150,
-        'image': 'assets/images/burger.png',
-      },
-      {
-        'name': 'Картофель фри',
-        'price': 100,
-        'image': 'assets/images/fries.png',
-      },
-      {
-        'name': 'Кола',
-        'price': 80,
-        'image': 'assets/images/cola.png',
-      },
+      {'name': 'Чизбургер',     'price': 150, 'image': 'assets/images/burger.png'},
+      {'name': 'Картофель фри', 'price': 100, 'image': 'assets/images/fries.png'},
+      {'name': 'Кола',          'price':  80, 'image': 'assets/images/cola.png'},
     ];
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.primaryRed,
-        title: const Text('Главная', style: AppStyles.appBarTitle),
-        elevation: 0,
-      ),
+      appBar: AppBar(title: Text(context.l10n.homeTab, style: AppStyles.appBarTitle)),
       body: ListView(
         padding: const EdgeInsets.only(bottom: 24),
-        children: <Widget>[
+        children: [
           const SizedBox(height: 12),
-
-          // Промо-баннеры
-          SizedBox(
-            height: 160,
-            child: PageView.builder(
-              itemCount: promotions.length,
-              controller: PageController(viewportFraction: 0.9),
-              itemBuilder: (context, index) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: Image.asset(promotions[index], fit: BoxFit.cover),
-                  ),
-                );
-              },
-            ),
-          ),
-
+          _PromoCarousel(promos: promos),
           const SizedBox(height: 24),
-
-          // Популярные товары
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              'Популярное',
-              style: AppStyles.sectionTitle,
-            ),
+            child: Text(context.l10n.popular, style: AppStyles.sectionTitle),
           ),
           const SizedBox(height: 12),
-
           SizedBox(
             height: 220,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: popular.length,
-              itemBuilder: (ctx, i) {
-                final item = popular[i];
-                return _PopularItemCard(
-                  name: item['name'] as String,
-                  price: item['price'] as int,
-                  image: item['image'] as String,
+              itemBuilder: (_, i) {
+                final name  = popular[i]['name']  as String;
+                final price = popular[i]['price'] as int;
+                final image = popular[i]['image'] as String;
+
+                return _PopularCard(
+                  name: name,
+                  price: price,
+                  image: image,
                   onAdd: () {
-                    cartProvider.addItem(
-                      name: item['name'] as String,
-                      price: item['price'] as int,
-                      image: item['image'] as String,
-                    );
+                    cart.addItem(name: name, price: price, image: image);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('${item['name']} добавлен в корзину')),
+                      SnackBar(content: Text(context.l10n.addedToCart(name))),
                     );
                   },
                 );
               },
             ),
           ),
-
           const SizedBox(height: 32),
-
-          // Кнопка "Смотреть меню"
           Center(
-            child: ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => MenuScreen(branchName: branchName ?? ''),
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryRed,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
+            child: FilledButton.icon(
               icon: const Icon(Icons.restaurant_menu),
-              label: const Text('Смотреть всё меню', style: AppStyles.buttonText),
+              label: Text(context.l10n.viewMenu, style: AppStyles.buttonText),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => MenuScreen(branchName: branchName ?? '')),
+              ),
             ),
           ),
         ],
@@ -135,13 +82,38 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-class _PopularItemCard extends StatelessWidget {
+/* ---------- helper widgets ---------- */
+
+class _PromoCarousel extends StatelessWidget {
+  final List<String> promos;
+  const _PromoCarousel({required this.promos});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 160,
+      child: PageView.builder(
+        controller: PageController(viewportFraction: .9),
+        itemCount: promos.length,
+        itemBuilder: (_, i) => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Image.asset(promos[i], fit: BoxFit.cover),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PopularCard extends StatelessWidget {
   final String name;
-  final int price;
+  final int    price;
   final String image;
   final VoidCallback onAdd;
 
-  const _PopularItemCard({
+  const _PopularCard({
     required this.name,
     required this.price,
     required this.image,
@@ -154,35 +126,27 @@ class _PopularItemCard extends StatelessWidget {
       width: 150,
       margin: const EdgeInsets.only(right: 16),
       decoration: BoxDecoration(
-        color: AppColors.cardBackground,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 6,
-            offset: const Offset(0, 4),
-          ),
+          BoxShadow(color: Colors.black.withOpacity(.08), blurRadius: 6, offset: const Offset(0, 4))
         ],
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
+        children: [
           const SizedBox(height: 12),
           Image.asset(image, width: 72, height: 72),
           const SizedBox(height: 8),
           Text(name, style: AppStyles.cardTitle),
-          Text('$price сом', style: AppStyles.cardPrice),
+          Text('${price} ${context.l10n.som}', style: AppStyles.cardPrice),
           const SizedBox(height: 6),
-          ElevatedButton(
-            onPressed: onAdd,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryRed,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+          FilledButton(
+            style: FilledButton.styleFrom(
               minimumSize: const Size(40, 36),
-              padding: EdgeInsets.zero,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
+            onPressed: onAdd,
             child: const Icon(Icons.add_shopping_cart, size: 18),
           ),
         ],

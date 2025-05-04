@@ -1,0 +1,116 @@
+{
+  "@@locale": "ky",
+
+  "language": "Тил",
+
+  "homeTab":      "Башкы",
+  "ordersTab":    "Буйруктар",
+  "rewardsTab":   "Сыйлыктар",
+  "settingsTab":  "Жөндөөлөр",
+
+  "popular":      "Көп тандалгандар",
+  "viewMenu":     "Толук меню",
+
+  "addedToCart":  "{item} себетке кошулду",
+  "@addedToCart": {
+    "placeholders": { "item": { "type": "String" } }
+  },
+
+  "branch": "Филиал: {branch}",
+  "@branch": {
+    "placeholders": { "branch": { "type": "String" } }
+  },
+
+  "amount": "Сумма: {amount} сом",
+  "@amount": {
+    "placeholders": { "amount": { "type": "int" } }
+  },
+
+  "status": "Статус: {status}",
+  "@status": {
+    "placeholders": { "status": { "type": "String" } }
+  },
+
+  "date": "Дата: {date}",
+  "@date": {
+    "placeholders": { "date": { "type": "String" } }
+  },
+
+  "userNotFound": "Колдонуучу табылган жок",
+
+  "errorLoading": "Ката: {error}",
+  "@errorLoading": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+
+  "noOrdersYet": "Азырынча буйруктар жок.",
+
+
+  "yourPoints": "Сиздин упайлар: {points}",
+  "@yourPoints": {
+    "placeholders": { "points": { "type": "int" } }
+  },
+
+  "cost": "Баасы: {cost} упай",
+  "@cost": {
+    "placeholders": { "cost": { "type": "int" } }
+  },
+
+  "noRewardsYet": "Азырынча сыйлыктар жок",
+  "exchange": "Алмаштыруу",
+  "goToCart": "Себетке",
+
+
+  "cartTitle": "Себет",
+  "chooseBranch": "Филиалды тандаңыз",
+  "cartEmpty": "Себет бош",
+
+  "total": "Жыйынтыгы: {total} сом",
+  "@total": {
+    "placeholders": { "total": { "type": "int" } }
+  },
+
+  "checkout": "Төлөм кылуу",
+
+  "orderPlaced": "Буйрутма кабыл алынды. +{points} упай!",
+  "@orderPlaced": {
+    "placeholders": { "points": { "type": "int" } }
+  },
+
+
+  "menuTitle": "Меню",
+
+
+  "welcome": "Кош келиңиз!",
+  "email": "Email",
+  "password": "Сыр сөз",
+  "loginEmail": "Email менен кирүү",
+  "loginGoogle": "Google менен кирүү",
+  "noAccount": "Аккаунтуңуз жокпу? Катталуу",
+  "unexpectedError": "Белгисиз ката",
+
+
+  "createAccount":  "Аккаунт түзүү",
+  "repeatPassword": "Сыр сөздү кайталаңыз",
+  "register":       "Катталуу",
+  "passMismatch":   "Сыр сөздөр дал келбеди",
+  "haveAccount":    "Аккаунтуңуз барбы? Кирүү",
+
+
+  "profileSaved": "Профиль сакталды",
+
+  "saveError": "Сактоо катасы: {error}",
+  "@saveError": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+
+
+  "darkMode": "Караңгы тема",
+  "logout":   "Аккаунттан чыгуу",
+  "name":     "Аты",
+  "phone":    "Телефон",
+  "save":     "Сактоо",
+  "noEmail":  "Email жок",
+
+  "som": "сом"
+}

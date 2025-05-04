@@ -1,0 +1,11 @@
+arb-dir: lib/l10n
+template-arb-file: intl_ru.arb  # файл-шаблон
+
+output-localization-file: app_localizations.dart
+output-class: AppLocalizations
+untranslated-messages-file: untranslated.txt
+
+# optional:
+synthetic-package: true     # если хотите, чтобы gen-файлы лежали внутри вашего lib/
+output-dir: lib/generated     # каталог, куда писать app_localizations.dart
+preferred-supported-locales: ["ru", "ky"]
