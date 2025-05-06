@@ -1,15 +1,16 @@
 // lib/screens/order_detail_screen.dart
 
-import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
+import 'package:flutter/material.dart';
+import '../utils/google_drive_link.dart';
 import '../l10n/l10n_ext.dart';
 import '../theme/app_styles.dart';
+import '../theme/app_colors.dart';
 
 class OrderDetailScreen extends StatelessWidget {
-  const OrderDetailScreen({super.key});
+  const OrderDetailScreen({Key? key}) : super(key: key);
 
-  // Вспомогательный метод для форматирования DateTime в строку
   String _formatDate(DateTime d) {
     final dd = d.day.toString().padLeft(2, '0');
     final mm = d.month.toString().padLeft(2, '0');
@@ -26,7 +27,7 @@ class OrderDetailScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(context.l10n.ordersTab, style: AppStyles.appBarTitle),
-        backgroundColor: Theme.of(context).colorScheme.primary,
+        backgroundColor: AppColors.red,
       ),
       body: FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         future: FirebaseFirestore.instance
@@ -49,7 +50,7 @@ class OrderDetailScreen extends StatelessWidget {
           final data   = snap.data!.data()!;
           final items  = List<Map<String, dynamic>>.from(data['items'] ?? []);
           final branch = data['branchName'] as String? ?? '';
-          final total  = (data['total'] as num?)?.toInt() ?? 0;
+          final total  = (data['total'] as num?)?.round() ?? 0;
           final status = data['status'] as String? ?? '';
           final ts     = (data['timestamp'] as Timestamp?)?.toDate();
 
@@ -64,7 +65,6 @@ class OrderDetailScreen extends StatelessWidget {
                 Text(context.l10n.status(status), style: AppStyles.cardPrice),
                 if (ts != null) ...[
                   const SizedBox(height: 4),
-                  // Передаём уже отформатированную строку!
                   Text(
                     context.l10n.date(_formatDate(ts)),
                     style: AppStyles.cardPrice,
@@ -76,22 +76,45 @@ class OrderDetailScreen extends StatelessWidget {
                     itemCount: items.length,
                     separatorBuilder: (_, __) => const Divider(),
                     itemBuilder: (_, i) {
-                      final it = items[i];
-                      return ListTile(
-                        leading: it['image'] != null
-                            ? Image.asset(
-                          it['image'] as String,
+                      final it       = items[i];
+                      final name     = it['name']  as String? ?? '';
+                      final price    = (it['price'] as num?)?.round() ?? 0;
+                      final rawImage = it['image'] as String? ?? '';
+                      final url      = rawImage.toDriveDirect();
+
+                      Widget leading;
+                      if (url.startsWith('http')) {
+                        leading = CachedNetworkImage(
+                          imageUrl: url,
+                          placeholder: (_, __) => Image.asset(
+                            'assets/placeholder.png',
+                            width: 40,
+                            height: 40,
+                            fit: BoxFit.cover,
+                          ),
+                          errorWidget: (_, __, ___) =>
+                          const Icon(Icons.broken_image, size: 40),
                           width: 40,
                           height: 40,
                           fit: BoxFit.cover,
-                        )
-                            : null,
-                        title: Text(
-                          it['name'] as String,
-                          style: AppStyles.cardTitle,
+                        );
+                      } else {
+                        leading = Image.asset(
+                          rawImage,
+                          width: 40,
+                          height: 40,
+                          fit: BoxFit.cover,
+                        );
+                      }
+
+                      return ListTile(
+                        leading: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: leading,
                         ),
+                        title: Text(name, style: AppStyles.cardTitle.copyWith(fontSize: 15)),
                         trailing: Text(
-                          '${it['price']} ${context.l10n.som}',
+                          '${price} ${context.l10n.som}',
                           style: AppStyles.cardPrice,
                         ),
                       );

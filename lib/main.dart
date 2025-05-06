@@ -2,12 +2,12 @@
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 
 import 'config/firebase_options.dart';
 import 'services/fcm_service.dart';
@@ -24,17 +24,17 @@ import 'screens/orders_screen.dart';
 import 'screens/order_detail_screen.dart';
 import 'theme/theme.dart';
 
+/// Навигатор для переходов из уведомлений
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
-  // Инициализируем FCM и локальные уведомления
   await FCMService.init();
 
   final prefs = await SharedPreferences.getInstance();
   final isDark = prefs.getBool('isDarkMode') ?? false;
-  final code   = prefs.getString('locale')    ?? 'ru';
+  final code   = prefs.getString('locale') ?? 'ru';
 
   runApp(
     MultiProvider(
@@ -67,8 +67,10 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    // Обработка "cold start" — когда приложение было убито и открыто через пуш
-    FirebaseMessaging.instance.getInitialMessage().then((msg) {
+    // Обработка холодного старта через пуш
+    FirebaseMessaging.instance
+        .getInitialMessage()
+        .then((msg) {
       final orderId = msg?.data['orderId'];
       if (orderId != null) {
         Future.microtask(() {
@@ -87,13 +89,11 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
-
-      // Тема
+      // темы
       theme: AppThemes.lightTheme,
       darkTheme: AppThemes.darkTheme,
       themeMode: themeProv.themeMode,
-
-      // Локализация
+      // локализация
       locale: localeProv.locale,
       supportedLocales: const [Locale('ru'), Locale('ky')],
       localizationsDelegates: const [
@@ -102,8 +102,7 @@ class _MyAppState extends State<MyApp> {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-
-      // Первый экран решает AuthWrapper
+      // экран-оболочка авторизации
       home: const AuthWrapper(),
       routes: {
         '/login'       : (_) => const LoginScreen(),
@@ -116,7 +115,7 @@ class _MyAppState extends State<MyApp> {
   }
 }
 
-/// Отвечает за показ Login/ MainScreen / AdminScreen
+/// Показ Login или Profile в зависимости от authState
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
@@ -130,24 +129,49 @@ class AuthWrapper extends StatelessWidget {
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        if (authSnap.data == null) {
+        final fbUser = authSnap.data;
+        if (fbUser == null) {
           return const LoginScreen();
         }
-        final uid = authSnap.data!.uid;
-        return FutureBuilder<void>(
-          future: context.read<UserProvider>().loadUser(uid),
-          builder: (ctx2, userSnap) {
-            if (userSnap.connectionState == ConnectionState.waiting) {
-              return const Scaffold(
-                body: Center(child: CircularProgressIndicator()),
-              );
-            }
-            final role = context.read<UserProvider>().user?.role;
-            return role == 'admin'
-                ? const AdminScreen()
-                : const MainScreen();
-          },
-        );
+        // есть токен FirebaseAuth — грузим профиль
+        return _UserLoader(uid: fbUser.uid);
+      },
+    );
+  }
+}
+
+/// Один раз вызывает loadUser и по завершении переходит к Main/Admin
+class _UserLoader extends StatefulWidget {
+  final String uid;
+  const _UserLoader({required this.uid});
+
+  @override
+  State<_UserLoader> createState() => _UserLoaderState();
+}
+
+class _UserLoaderState extends State<_UserLoader> {
+  late Future<void> _loadFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFuture = context.read<UserProvider>().loadUser(widget.uid);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<void>(
+      future: _loadFuture,
+      builder: (ctx, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        final role = context.read<UserProvider>().user?.role;
+        return role == 'admin'
+            ? const AdminScreen()
+            : const MainScreen();
       },
     );
   }

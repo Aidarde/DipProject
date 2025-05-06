@@ -1,17 +1,33 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+/// Единичная позиция меню (бургер / напиток / десерт …)
 class MenuItem {
   final String id;
   final String name;
-  final String description;
-  final double price;
+  /// burger / side / drink / dessert …
+  final String type;
+  final int    basePrice;
   final String imageUrl;
-  final String category;
+  final bool   popular;
 
   MenuItem({
     required this.id,
     required this.name,
-    required this.description,
-    required this.price,
+    required this.type,
+    required this.basePrice,
     required this.imageUrl,
-    required this.category,
+    required this.popular,
   });
+
+  factory MenuItem.fromDoc(DocumentSnapshot<Map<String, dynamic>> d) {
+    final m = d.data()!;
+    return MenuItem(
+      id        : d.id,
+      name      : m['name'],
+      type      : m['type'],
+      basePrice : (m['basePrice'] as num).toInt(),
+      imageUrl  : m['image'],
+      popular   : m['popular'] ?? false,
+    );
+  }
 }

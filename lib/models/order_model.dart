@@ -7,7 +7,7 @@ class AppOrder {
   final List<Map<String, dynamic>> items;
   final double total;
   final DateTime createdAt;
-  final String status; // ✅ новое поле
+  final String status;
 
   AppOrder({
     required this.id,
@@ -27,7 +27,7 @@ class AppOrder {
       'items': items,
       'total': total,
       'createdAt': createdAt.toIso8601String(),
-      'status': status, // ✅ сохраняем статус
+      'status': status,
     };
   }
 
@@ -39,7 +39,7 @@ class AppOrder {
       items: List<Map<String, dynamic>>.from(map['items']),
       total: (map['total'] as num).toDouble(),
       createdAt: (map['timestamp'] as Timestamp).toDate(),
-      status: map['status'] ?? 'в обработке', // ✅ получаем статус или дефолт
+      status: map['status'] ?? 'в обработке',
     );
   }
 }

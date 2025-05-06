@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/user_model.dart';
-import '../services/fcm_service.dart'; // ← теперь тут FCMService
+import '../services/fcm_service.dart';
 
 class UserProvider with ChangeNotifier {
   AppUser? _user;
@@ -13,7 +13,6 @@ class UserProvider with ChangeNotifier {
 
   Future<void> loadUser(String uid) async {
     _isLoading = true;
-    notifyListeners();
 
     try {
       final doc = await FirebaseFirestore.instance
