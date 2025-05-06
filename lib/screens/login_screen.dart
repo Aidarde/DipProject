@@ -1,7 +1,9 @@
 // lib/screens/login_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
 import '../services/auth_service.dart';
 import '../providers/user_provider.dart';
 import '../l10n/l10n_ext.dart';
@@ -28,12 +30,15 @@ class _LoginScreenState extends State<LoginScreen> {
       _loading = true;
     });
     try {
-      final user = await AuthService.signInWithEmail(
+      final credential = await AuthService.signInWithEmail(
         _email.text.trim(),
         _pass.text.trim(),
       );
-      if (user != null) {
-        await _openByRole(user.uid);
+      final uid = credential?.user?.uid;
+      if (uid != null) {
+        await _openByRole(uid);
+      } else {
+        setState(() => _err = context.l10n.unexpectedError);
       }
     } on FirebaseAuthException catch (e) {
       setState(() => _err = e.message);
@@ -50,9 +55,12 @@ class _LoginScreenState extends State<LoginScreen> {
       _loading = true;
     });
     try {
-      final user = await AuthService.signInWithGoogle();
-      if (user != null) {
-        await _openByRole(user.uid);
+      final credential = await AuthService.signInWithGoogle();
+      final uid = credential?.user?.uid;
+      if (uid != null) {
+        await _openByRole(uid);
+      } else {
+        setState(() => _err = context.l10n.unexpectedError);
       }
     } catch (e) {
       setState(() => _err = e.toString());
@@ -62,9 +70,9 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _openByRole(String uid) async {
-    // загрузим профиль и FCM-токен
+    // Загружаем профиль и FCM-токен
     await context.read<UserProvider>().loadUser(uid);
-    // возвращаемся на корень — AuthWrapper сам выберет Admin или Main
+    // Возвращаемся на корневой маршрут — AuthWrapper сам разберёт роль
     if (!mounted) return;
     Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false);
   }

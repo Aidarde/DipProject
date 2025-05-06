@@ -1,39 +1,19 @@
 // lib/screens/menu_screen.dart
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/cart_provider.dart';
-import '../utils/google_drive_link.dart';
 import '../l10n/l10n_ext.dart';
 import '../theme/app_styles.dart';
 import '../theme/app_colors.dart';
+import '../utils/network_image.dart';
+import '../utils/google_drive_link.dart';
 import 'cart_screen.dart';
 
-class MenuScreen extends StatefulWidget {
+class MenuScreen extends StatelessWidget {
   final String branchName;
   const MenuScreen({Key? key, required this.branchName}) : super(key: key);
-
-  @override
-  State<MenuScreen> createState() => _MenuScreenState();
-}
-
-class _MenuScreenState extends State<MenuScreen> {
-  @override
-  void initState() {
-    super.initState();
-    // Prefetch всех картинок меню (делается один раз)
-    FirebaseFirestore.instance.collection('menu').get().then((snap) {
-      for (var d in snap.docs) {
-        final raw = d['image'] as String? ?? '';
-        final url = raw.toDriveDirect();
-        if (url.startsWith('http')) {
-          precacheImage(CachedNetworkImageProvider(url), context);
-        }
-      }
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,57 +21,78 @@ class _MenuScreenState extends State<MenuScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(context.l10n.menuTitle, style: AppStyles.appBarTitle),
         backgroundColor: AppColors.red,
+        title: Text(context.l10n.menuTitle, style: AppStyles.appBarTitle),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.shopping_cart),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const CartScreen()),
+              );
+            },
+          ),
+        ],
       ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: FirebaseFirestore.instance.collection('menu').orderBy('name').snapshots(),
+        stream: FirebaseFirestore.instance
+            .collection('menu')
+            .orderBy('basePrice')
+            .snapshots(),
         builder: (ctx, snap) {
-          if (!snap.hasData) {
+          if (snap.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          final docs = snap.data!.docs;
-          if (docs.isEmpty) {
-            return Center(child: Text(context.l10n.noRewardsYet));
+          if (snap.hasError) {
+            return Center(
+              child: Text(
+                context.l10n.errorLoading('${snap.error}'),
+                style: AppStyles.errorText,
+              ),
+            );
           }
+
+          final docs = snap.data?.docs ?? [];
+          if (docs.isEmpty) {
+            return Center(
+              child: Text(context.l10n.menuEmpty, style: AppStyles.cardPrice),
+            );
+          }
+
           return ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: docs.length,
             itemBuilder: (_, i) {
-              final data = docs[i].data();
-              final name  = data['name'] as String? ?? '';
-              final price = (data['basePrice'] as num?)?.round() ?? 0;
-              final raw   = data['image'] as String? ?? '';
-              final url   = raw.toDriveDirect();
+              final data     = docs[i].data();
+              final name     = data['name']      as String? ?? '-';
+              final rawPrice = data['basePrice'] as num?    ?? 0;
+              final price    = rawPrice.round();
+              final rawImage = data['image']     as String? ?? '';
+              final imageUrl = rawImage.toDriveDirect();
 
-              final pic = raw.startsWith('http')
-                  ? CachedNetworkImage(
-                imageUrl: url,
-                placeholder: (_, __) =>
-                    Image.asset('assets/placeholder.png', width: 56, height: 56, fit: BoxFit.cover),
-                errorWidget: (_, __, ___) =>
-                const Icon(Icons.broken_image, size: 56),
-                width: 56,
-                height: 56,
-                fit: BoxFit.cover,
-              )
-                  : Image.asset(raw, width: 56, height: 56, fit: BoxFit.cover);
-
-              return Card(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                elevation: 3,
-                margin: const EdgeInsets.only(bottom: 16),
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(.05), blurRadius: 6)],
+                ),
                 child: ListTile(
-                  contentPadding: const EdgeInsets.all(12),
-                  leading: ClipRRect(borderRadius: BorderRadius.circular(8), child: pic),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                  leading: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: networkImage(imageUrl, width: 56, height: 56),
+                  ),
                   title: Text(name, style: AppStyles.cardTitle),
                   subtitle: Text('$price ${context.l10n.som}', style: AppStyles.cardPrice),
                   trailing: IconButton(
-                    icon: const Icon(Icons.add_shopping_cart),
+                    icon: const Icon(Icons.add_shopping_cart, color: AppColors.red),
                     onPressed: () {
-                      cart.addItem(name: name, price: price, image: url);
-                      ScaffoldMessenger.of(context)
-                          .showSnackBar(SnackBar(content: Text(context.l10n.addedToCart(name))));
+                      cart.addItem(name: name, price: price, image: imageUrl);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(context.l10n.addedToCart(name))),
+                      );
                     },
                   ),
                 ),
@@ -99,11 +100,6 @@ class _MenuScreenState extends State<MenuScreen> {
             },
           );
         },
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppColors.red,
-        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen())),
-        child: const Icon(Icons.shopping_cart),
       ),
     );
   }

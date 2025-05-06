@@ -33,6 +33,8 @@ class UserProvider with ChangeNotifier {
       debugPrint('UserProvider.loadUser error: $e\n$st');
     } finally {
       _isLoading = false;
+      Future.microtask(notifyListeners);
+
       notifyListeners();
     }
   }
