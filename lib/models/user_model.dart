@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class AppUser {
   final String uid;
   final String email;
@@ -7,7 +5,7 @@ class AppUser {
   final int bonusPoints;
   final String? branchName;
 
-  // Новые поля для SettingsScreen:
+  // Дополнительные поля для экрана настроек
   final String? displayName;
   final String? phone;
   final String? photoURL;
@@ -23,28 +21,30 @@ class AppUser {
     this.photoURL,
   });
 
+  /// Преобразует объект в Map для записи в Firestore
   Map<String, dynamic> toMap() {
     return {
       'email': email,
       'role': role,
       'bonusPoints': bonusPoints,
-      if (branchName != null)   'branchName': branchName,
-      if (displayName != null)  'displayName': displayName,
-      if (phone != null)        'phone': phone,
-      if (photoURL != null)     'photoURL': photoURL,
+      if (branchName != null)  'branchName': branchName,
+      if (displayName != null) 'displayName': displayName,
+      if (phone != null)       'phone': phone,
+      if (photoURL != null)    'photoURL': photoURL,
     };
   }
 
+  /// Создаёт объект из данных Firestore
   factory AppUser.fromMap(String uid, Map<String, dynamic> map) {
     return AppUser(
-      uid: uid,
-      email: map['email'] as String? ?? '',
-      role: map['role'] as String? ?? 'user',
+      uid:         uid,
+      email:       map['email']       as String? ?? '',
+      role:        map['role']        as String? ?? 'user',
       bonusPoints: (map['bonusPoints'] as num?)?.toInt() ?? 0,
-      branchName: map['branchName'] as String?,
+      branchName:  map['branchName']  as String?,
       displayName: map['displayName'] as String?,
-      phone: map['phone'] as String?,
-      photoURL: map['photoURL'] as String?,
+      phone:       map['phone']       as String?,
+      photoURL:    map['photoURL']    as String?,
     );
   }
 }

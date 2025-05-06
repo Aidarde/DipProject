@@ -1,0 +1,19 @@
+{
+  "name": "functions",
+  "description": "Cloud Functions for Enjoy app",
+  "main": "lib/index.js",
+  "scripts": {
+    "build": "tsc",
+    "deploy": "npm run build"
+  },
+  "engines": {
+    "node": "20"
+  },
+  "dependencies": {
+    "firebase-admin": "^11.11.1",
+    "firebase-functions": "^4.6.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.2"
+  }
+}
