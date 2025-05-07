@@ -2,7 +2,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import '../providers/cart_provider.dart';
 import '../l10n/l10n_ext.dart';
 import '../theme/app_styles.dart';
