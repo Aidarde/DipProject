@@ -1,15 +1,15 @@
-/// Расширение для String: конвертирует Google Drive share-URL в direct-URL.
-extension GoogleDriveLink on String {
-  /// Если this содержит `/d/FILE_ID` или `?id=FILE_ID`,
-  /// возвращает `https://drive.google.com/uc?export=view&id=FILE_ID`.
-  /// Иначе — возвращает исходную строку без изменений.
+// lib/utils/google_drive_link.dart
+extension DriveLinkFix on String {
+  /// Google Drive share-URL → прямой user-content URL.
+  /// 1) https://drive.google.com/file/d/FILE_ID/view?usp=sharing
+  ///    → https://lh3.googleusercontent.com/d/FILE_ID
+  ///
+  /// 2) если строка не похожа на Google Drive — возвращаем как есть.
   String toDriveDirect() {
-    final reg = RegExp(r'/d/([^/]+)|[?&]id=([^&]+)');
-    final m = reg.firstMatch(this);
-    final id = m?.group(1) ?? m?.group(2);
-    if (id != null && id.isNotEmpty) {
-      return 'https://drive.google.com/uc?export=view&id=$id';
-    }
-    return this;
+    final m = RegExp(r'/d/([^/]+)/').firstMatch(this);
+    final id = m?.group(1);
+    return id == null
+        ? this
+        : 'https://lh3.googleusercontent.com/d/$id';
   }
 }

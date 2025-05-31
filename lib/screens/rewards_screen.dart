@@ -1,16 +1,17 @@
 // lib/screens/rewards_screen.dart
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:enjoy/utils/universal_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import '../providers/user_provider.dart';
 import '../providers/cart_provider.dart';
 import '../l10n/l10n_ext.dart';
 import '../theme/app_styles.dart';
 import '../theme/app_colors.dart';
-import '../utils/google_drive_link.dart';
 import 'cart_screen.dart';
+import '../utils/google_drive_link.dart';
+
 
 class RewardsScreen extends StatefulWidget {
   const RewardsScreen({Key? key}) : super(key: key);
@@ -93,14 +94,7 @@ class _RewardsScreenState extends State<RewardsScreen> {
                     final can   = cost <= left;
 
                     final icon = url.startsWith('http')
-                        ? CachedNetworkImage(
-                        imageUrl: url,
-                        placeholder: (_, __) => Image.asset(
-                            'assets/placeholder.png',
-                            width: 60, height: 60, fit: BoxFit.cover),
-                        errorWidget: (_, __, ___) =>
-                        const Icon(Icons.broken_image, size: 60),
-                        width: 60, height: 60, fit: BoxFit.cover)
+                        ? UniversalImage(url, width: 56, height: 56, borderRadius: 8)
                         : const Icon(Icons.card_giftcard,
                         size: 60, color: Colors.red);
 

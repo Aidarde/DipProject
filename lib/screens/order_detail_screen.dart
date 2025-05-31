@@ -1,12 +1,13 @@
 // lib/screens/order_detail_screen.dart
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:enjoy/utils/universal_image.dart';
 import 'package:flutter/material.dart';
-import '../utils/google_drive_link.dart';
 import '../l10n/l10n_ext.dart';
 import '../theme/app_styles.dart';
 import '../theme/app_colors.dart';
+import '../utils/google_drive_link.dart';
+
 
 class OrderDetailScreen extends StatelessWidget {
   const OrderDetailScreen({Key? key}) : super(key: key);
@@ -84,20 +85,7 @@ class OrderDetailScreen extends StatelessWidget {
 
                       Widget leading;
                       if (url.startsWith('http')) {
-                        leading = CachedNetworkImage(
-                          imageUrl: url,
-                          placeholder: (_, __) => Image.asset(
-                            'assets/placeholder.png',
-                            width: 40,
-                            height: 40,
-                            fit: BoxFit.cover,
-                          ),
-                          errorWidget: (_, __, ___) =>
-                          const Icon(Icons.broken_image, size: 40),
-                          width: 40,
-                          height: 40,
-                          fit: BoxFit.cover,
-                        );
+                        leading = UniversalImage(url, width: 56, height: 56, borderRadius: 8);
                       } else {
                         leading = Image.asset(
                           rawImage,

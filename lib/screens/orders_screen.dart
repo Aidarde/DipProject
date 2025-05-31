@@ -2,6 +2,7 @@
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:enjoy/utils/universal_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -104,18 +105,7 @@ class OrdersScreen extends StatelessWidget {
 
                     Widget leading;
                     if (url.startsWith('http')) {
-                      leading = CachedNetworkImage(
-                        imageUrl: url,
-                        placeholder: (_, __) => SizedBox(
-                          width: 40,
-                          height: 40,
-                          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                        ),
-                        errorWidget: (_, __, ___) => const Icon(Icons.broken_image, size: 40),
-                        width: 40,
-                        height: 40,
-                        fit: BoxFit.cover,
-                      );
+                      leading = UniversalImage(url, width: 56, height: 56, borderRadius: 8);
                     } else {
                       leading = Image.asset(rawImage, width: 40, height: 40, fit: BoxFit.cover);
                     }

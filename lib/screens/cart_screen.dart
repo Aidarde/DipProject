@@ -1,16 +1,17 @@
 // lib/screens/cart_screen.dart
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:enjoy/utils/universal_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../utils/google_drive_link.dart';
 import '../providers/cart_provider.dart';
 import '../providers/user_provider.dart';
 import '../providers/branch_provider.dart';
 import '../l10n/l10n_ext.dart';
 import '../theme/app_styles.dart';
-import '../utils/google_drive_link.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({Key? key}) : super(key: key);
@@ -73,21 +74,7 @@ class _CartScreenState extends State<CartScreen> {
                 final url      = rawImage.toDriveDirect();
 
                 final Widget leading = url.startsWith('http')
-                    ? CachedNetworkImage(
-                  imageUrl: url,
-                  placeholder: (_, __) => SizedBox(
-                    width: 50,
-                    height: 50,
-                    child: Center(
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  ),
-                  errorWidget: (_, __, ___) =>
-                  const Icon(Icons.broken_image, size: 50),
-                  width: 50,
-                  height: 50,
-                  fit: BoxFit.cover,
-                )
+                    ? UniversalImage(url, width: 56, height: 56, borderRadius: 8)
                     : Image.asset(
                   rawImage,
                   width: 50,

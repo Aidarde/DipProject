@@ -1,3 +1,4 @@
+import 'package:enjoy/utils/universal_image.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
@@ -173,20 +174,7 @@ class _AdminScreenState extends State<AdminScreen> {
 
                             Widget leading;
                             if (url.startsWith('http')) {
-                              leading = CachedNetworkImage(
-                                imageUrl: url,
-                                placeholder: (_, __) => Image.asset(
-                                  'assets/placeholder.png',
-                                  width: 32,
-                                  height: 32,
-                                  fit: BoxFit.cover,
-                                ),
-                                errorWidget: (_, __, ___) =>
-                                const Icon(Icons.broken_image, size: 32),
-                                width: 32,
-                                height: 32,
-                                fit: BoxFit.cover,
-                              );
+                              leading = UniversalImage(url, width: 56, height: 56, borderRadius: 8);
                             } else {
                               leading = Image.asset(
                                 raw,
