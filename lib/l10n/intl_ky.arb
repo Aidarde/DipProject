@@ -115,5 +115,11 @@
   "menuEmpty":   "Себет бош",
   "addToCart":   "себетке кошуу",
 
+  "categoryBurgers": "Бургерлер",
+  "categorySides": "Гарнирлер",
+  "categoryDrinks": "Суусундуктар",
+  "categoryDesserts": "Десерттер",
+  "categoryOther": "Башка",
+
   "som": "сом"
 }

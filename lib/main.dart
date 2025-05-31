@@ -24,13 +24,13 @@ import 'screens/orders_screen.dart';
 import 'screens/order_detail_screen.dart';
 import 'theme/theme.dart';
 
-/// Навигатор для переходов из уведомлений
+/// Навигатор для переходов из пуш-уведомлений
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  await FCMService.init();
+  await FCMService.init(navigatorKey);  // инициализируем пуши и локальные уведомления
 
   final prefs = await SharedPreferences.getInstance();
   final isDark = prefs.getBool('isDarkMode') ?? false;
@@ -59,6 +59,7 @@ void main() async {
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
   @override
   State<MyApp> createState() => _MyAppState();
 }
@@ -67,10 +68,8 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    // Обработка холодного старта через пуш
-    FirebaseMessaging.instance
-        .getInitialMessage()
-        .then((msg) {
+    // Обработка "холодного" старта по пуш-уведомлению
+    FirebaseMessaging.instance.getInitialMessage().then((msg) {
       final orderId = msg?.data['orderId'];
       if (orderId != null) {
         Future.microtask(() {
@@ -89,12 +88,10 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
-      // темы
-      theme: AppThemes.lightTheme,
+      theme:     AppThemes.lightTheme,
       darkTheme: AppThemes.darkTheme,
       themeMode: themeProv.themeMode,
-      // локализация
-      locale: localeProv.locale,
+      locale:    localeProv.locale,
       supportedLocales: const [Locale('ru'), Locale('ky')],
       localizationsDelegates: const [
         AppLocalizations.delegate,
@@ -102,8 +99,7 @@ class _MyAppState extends State<MyApp> {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      // экран-оболочка авторизации
-      home: const AuthWrapper(),
+      home: const AuthWrapper(),  // теперь конструктор есть! :contentReference[oaicite:1]{index=1}
       routes: {
         '/login'       : (_) => const LoginScreen(),
         '/main'        : (_) => const MainScreen(),
@@ -115,7 +111,7 @@ class _MyAppState extends State<MyApp> {
   }
 }
 
-/// Показ Login или Profile в зависимости от authState
+/// Показывает либо Login, либо нужный экран после загрузки профиля
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
@@ -133,14 +129,14 @@ class AuthWrapper extends StatelessWidget {
         if (fbUser == null) {
           return const LoginScreen();
         }
-        // есть токен FirebaseAuth — грузим профиль
+        // авторизован — грузим профиль и переходим дальше
         return _UserLoader(uid: fbUser.uid);
       },
     );
   }
 }
 
-/// Один раз вызывает loadUser и по завершении переходит к Main/Admin
+/// Один раз вызывает loadUser, а затем отдаёт Main или Admin экран
 class _UserLoader extends StatefulWidget {
   final String uid;
   const _UserLoader({required this.uid});

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+
 import '../providers/user_provider.dart';
-import '../services/auth_service.dart';  // для выхода
+import '../services/auth_service.dart';
+import '../utils/google_drive_link.dart';
 
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});
@@ -16,28 +19,21 @@ class _AdminScreenState extends State<AdminScreen> {
 
   Color getStatusColor(String status) {
     switch (status.toLowerCase()) {
-      case 'ожидается':
-        return Colors.grey;
-      case 'в обработке':
-        return Colors.orange;
-      case 'готов':
-        return Colors.green;
-      case 'выдан':
-        return Colors.blue;
-      default:
-        return Colors.black;
+      case 'ожидается':   return Colors.grey;
+      case 'в обработке': return Colors.orange;
+      case 'готов':       return Colors.green;
+      case 'выдан':       return Colors.blue;
+      default:            return Colors.black;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final userProv = Provider.of<UserProvider>(context);
-    final appUser = userProv.user;
+    final userProv = context.watch<UserProvider>();
+    final appUser  = userProv.user;
 
     if (userProv.isLoading || appUser == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final branchName = appUser.branchName;
@@ -61,14 +57,13 @@ class _AdminScreenState extends State<AdminScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await AuthService.signOut();
-            },
+            onPressed: () async => AuthService.signOut(),
           ),
         ],
       ),
       body: Column(
         children: [
+          // шапка с названием филиала
           Container(
             width: double.infinity,
             color: Colors.redAccent.shade100,
@@ -91,6 +86,8 @@ class _AdminScreenState extends State<AdminScreen> {
               ],
             ),
           ),
+
+          // фильтр по статусу
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: Row(
@@ -100,22 +97,20 @@ class _AdminScreenState extends State<AdminScreen> {
                 DropdownButton<String>(
                   value: statusFilter,
                   items: const [
-                    DropdownMenuItem(value: 'все', child: Text('Все')),
-                    DropdownMenuItem(value: 'ожидается', child: Text('Ожидается')),
+                    DropdownMenuItem(value: 'все',          child: Text('Все')),
+                    DropdownMenuItem(value: 'ожидается',   child: Text('Ожидается')),
                     DropdownMenuItem(value: 'в обработке', child: Text('В обработке')),
-                    DropdownMenuItem(value: 'готов', child: Text('Готов')),
-                    DropdownMenuItem(value: 'выдан', child: Text('Выдан')),
+                    DropdownMenuItem(value: 'готов',       child: Text('Готов')),
+                    DropdownMenuItem(value: 'выдан',       child: Text('Выдан')),
                   ],
-                  onChanged: (value) {
-                    setState(() {
-                      statusFilter = value!;
-                    });
-                  },
+                  onChanged: (value) => setState(() => statusFilter = value!),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 4),
+
+          // список заказов
           Expanded(
             child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: ordersStream,
@@ -139,11 +134,11 @@ class _AdminScreenState extends State<AdminScreen> {
                 return ListView.builder(
                   itemCount: docs.length,
                   itemBuilder: (ctx, i) {
-                    final data = docs[i].data();
-                    final items = List<Map<String, dynamic>>.from(data['items'] ?? []);
+                    final data   = docs[i].data();
+                    final items  = List<Map<String, dynamic>>.from(data['items'] ?? []);
                     final status = data['status'] ?? '—';
-                    final total = data['total'] ?? 0;
-                    final ts = (data['timestamp'] as Timestamp?)?.toDate();
+                    final total  = data['total']  ?? 0;
+                    final ts     = (data['timestamp'] as Timestamp?)?.toDate();
 
                     return Card(
                       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -170,13 +165,46 @@ class _AdminScreenState extends State<AdminScreen> {
                           ],
                         ),
                         children: [
-                          ...items.map((it) => ListTile(
-                            leading: it['image'] != null
-                                ? Image.asset(it['image'], width: 32, height: 32)
-                                : const Icon(Icons.fastfood),
-                            title: Text(it['name']),
-                            trailing: Text('${it['price']} сом'),
-                          )),
+                          ...items.map((it) {
+                            final raw   = it['image'] as String? ?? '';
+                            final url   = raw.toDriveDirect();
+                            final name  = it['name']  ?? '-';
+                            final price = it['price'] ?? 0;
+
+                            Widget leading;
+                            if (url.startsWith('http')) {
+                              leading = CachedNetworkImage(
+                                imageUrl: url,
+                                placeholder: (_, __) => Image.asset(
+                                  'assets/placeholder.png',
+                                  width: 32,
+                                  height: 32,
+                                  fit: BoxFit.cover,
+                                ),
+                                errorWidget: (_, __, ___) =>
+                                const Icon(Icons.broken_image, size: 32),
+                                width: 32,
+                                height: 32,
+                                fit: BoxFit.cover,
+                              );
+                            } else {
+                              leading = Image.asset(
+                                raw,
+                                width: 32,
+                                height: 32,
+                                fit: BoxFit.cover,
+                              );
+                            }
+
+                            return ListTile(
+                              leading: ClipRRect(
+                                borderRadius: BorderRadius.circular(6),
+                                child: leading,
+                              ),
+                              title: Text(name.toString()),
+                              trailing: Text('$price сом'),
+                            );
+                          }),
                           const Divider(),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -187,10 +215,10 @@ class _AdminScreenState extends State<AdminScreen> {
                                 DropdownButton<String>(
                                   value: status,
                                   items: const [
-                                    DropdownMenuItem(value: 'ожидается', child: Text('Ожидается')),
+                                    DropdownMenuItem(value: 'ожидается',   child: Text('Ожидается')),
                                     DropdownMenuItem(value: 'в обработке', child: Text('В обработке')),
-                                    DropdownMenuItem(value: 'готов', child: Text('Готов')),
-                                    DropdownMenuItem(value: 'выдан', child: Text('Выдан')),
+                                    DropdownMenuItem(value: 'готов',       child: Text('Готов')),
+                                    DropdownMenuItem(value: 'выдан',       child: Text('Выдан')),
                                   ],
                                   onChanged: (newStatus) {
                                     if (newStatus != null) {
@@ -203,7 +231,7 @@ class _AdminScreenState extends State<AdminScreen> {
                                 ),
                               ],
                             ),
-                          )
+                          ),
                         ],
                       ),
                     );

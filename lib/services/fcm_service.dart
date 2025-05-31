@@ -5,14 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-/// Ключ для навигации из пуш-уведомлений
-final navigatorKey = GlobalKey<NavigatorState>();
-
 class FCMService {
+  FCMService._();                    // приватный конструктор-заглушка
   static final _messaging = FirebaseMessaging.instance;
-  static final _local = FlutterLocalNotificationsPlugin();
+  static final _local     = FlutterLocalNotificationsPlugin();
 
-  // android-канал (mobile-only)
+  // Android-канал (используется только на мобильных)
   static const _channel = AndroidNotificationChannel(
     'orders',
     'Order Notifications',
@@ -20,11 +18,17 @@ class FCMService {
     description: 'Уведомления о готовности заказа',
   );
 
-  /// Вызываем в main() ДО runApp()
-  static Future<void> init() async {
+  /// Инициализация Firebase Messaging и локальных уведомлений.
+  /// Вызывать **до** `runApp`, передавая `navigatorKey`
+  /// из `main.dart`, чтобы не было дублирования ключей.
+  static Future<void> init(GlobalKey<NavigatorState> navKey) async {
+    // Сохраняем key для дальнейшей навигации из пушей
+    _navKey = navKey;
+
+    // Разрешения (на Web автоматически запрашиваются браузером)
     await _messaging.requestPermission();
 
-    // локальные уведомления нужны только на мобильных
+    // Локальные уведомления нужны только на мобильных
     if (!kIsWeb) {
       const initSettings = InitializationSettings(
         android: AndroidInitializationSettings('@mipmap/ic_launcher'),
@@ -35,8 +39,7 @@ class FCMService {
         onDidReceiveNotificationResponse: (resp) {
           final orderId = resp.payload;
           if (orderId != null) {
-            navigatorKey.currentState
-                ?.pushNamed('/orderDetails', arguments: orderId);
+            _navKey.currentState?.pushNamed('/orderDetails', arguments: orderId);
           }
         },
       );
@@ -46,10 +49,11 @@ class FCMService {
           ?.createNotificationChannel(_channel);
     }
 
-    // foreground-push
+    // Пуш в foreground
     FirebaseMessaging.onMessage.listen((msg) {
       final n = msg.notification;
       if (n == null) return;
+
       if (!kIsWeb) {
         _local.show(
           n.hashCode,
@@ -68,17 +72,21 @@ class FCMService {
       }
     });
 
-    // push при открытом / фоне
+    // Пуш при запуске из фона / клике на уведомлении
     FirebaseMessaging.onMessageOpenedApp.listen((msg) {
       final orderId = msg.data['orderId'];
       if (orderId != null) {
-        navigatorKey.currentState
-            ?.pushNamed('/orderDetails', arguments: orderId);
+        _navKey.currentState?.pushNamed('/orderDetails', arguments: orderId);
       }
     });
   }
 
-  /// —--- helpers для Firestore ---—
+  // -----------------------------------------------------------
+  // --------------------- helpers ------------------------------
+  // -----------------------------------------------------------
+
+  static late GlobalKey<NavigatorState> _navKey;
+
   static Future<String?> getToken() => _messaging.getToken();
 
   static Future<void> saveTokenToFirestore(String uid) async {

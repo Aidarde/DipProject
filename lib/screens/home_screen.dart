@@ -1,7 +1,9 @@
 // lib/screens/home_screen.dart
+import 'dart:developer' as dev;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:provider/provider.dart';
 
 import '../providers/branch_provider.dart';
@@ -21,10 +23,14 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  /// Теперь используем тот же placeholder, что и в других местах
+  static const _fallbackBanner = 'assets/placeholder.png';
+
   @override
   void initState() {
     super.initState();
-    // префетчим все «popular»
+
+    // Префетчим изображения популярных товаров
     FirebaseFirestore.instance
         .collection('menu')
         .where('popular', isEqualTo: true)
@@ -43,6 +49,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final branch = context.watch<BranchProvider>().selectedBranch ?? '';
     final cart   = context.read<CartProvider>();
+    final theme  = Theme.of(context);
+    final size   = MediaQuery.of(context).size;
 
     return Scaffold(
       appBar: AppBar(
@@ -53,59 +61,92 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.only(bottom: 80),
         children: [
           const SizedBox(height: 12),
-          // баннеры
+
+          // ── Баннеры ───────────────────────────────────────────────────────────
           SizedBox(
-            height: 160,
-            child: PageView(
-              controller: PageController(viewportFraction: .9),
-              children: ['promo1', 'promo2', 'promo3']
-                  .map((p) => Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Image.asset('assets/banners/$p.png', fit: BoxFit.cover),
-                ),
-              ))
-                  .toList(),
+            height: 180,
+            child: PageView.builder(
+              controller: PageController(viewportFraction: .88),
+              itemCount: 3,
+              itemBuilder: (_, idx) {
+                final name = 'assets/banners/promo${idx + 1}.png';
+                return FutureBuilder<bool>(
+                  future: _assetExists(name),
+                  builder: (_, snap) {
+                    final path = (snap.data == true) ? name : _fallbackBanner;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Image.asset(path, fit: BoxFit.cover),
+                      ),
+                    );
+                  },
+                );
+              },
             ),
           ),
-          const SizedBox(height: 24),
+
+          const SizedBox(height: 28),
+
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(context.l10n.popular, style: AppStyles.sectionTitle),
           ),
           const SizedBox(height: 12),
+
+          // ── Популярные товары ────────────────────────────────────────────────
           SizedBox(
-            height: 250,
+            height: 260,
             child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: FirebaseFirestore.instance
                   .collection('menu')
                   .where('popular', isEqualTo: true)
                   .snapshots(),
               builder: (_, snap) {
-                if (!snap.hasData) {
+                if (snap.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
+                if (snap.hasError) {
+                  return Center(
+                    child: Text(
+                      context.l10n.errorLoading('${snap.error}'),
+                      style: AppStyles.errorText,
+                    ),
+                  );
+                }
+                final docs = snap.data?.docs ?? [];
+                if (docs.isEmpty) {
+                  return Center(
+                    child: Text(
+                      context.l10n.menuEmpty,
+                      style: AppStyles.cardPrice,
+                    ),
+                  );
+                }
+
                 return ListView.separated(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: snap.data!.docs.length,
+                  itemCount: docs.length,
                   separatorBuilder: (_, __) => const SizedBox(width: 16),
                   itemBuilder: (_, i) {
-                    final data = snap.data!.docs[i].data();
-                    final name  = data['name']  as String? ?? '';
-                    final price = (data['basePrice'] as num?)?.round() ?? 0;
-                    final raw   = data['image'] as String? ?? '';
-                    final url   = raw.toDriveDirect();
+                    final d      = docs[i].data();
+                    final name   = d['name']      as String? ?? '';
+                    final price  = (d['basePrice'] as num?)?.round() ?? 0;
+                    final rawImg = d['image']     as String? ?? '';
+                    final url    = rawImg.toDriveDirect();
 
                     return _PopularCard(
-                      name: name,
-                      price: price,
-                      imageUrl: url,
-                      onAdd: () {
+                      name     : name,
+                      price    : price,
+                      imageUrl : url,
+                      width    : size.width * 0.42,
+                      onAdd    : () {
                         cart.addItem(name: name, price: price, image: url);
-                        ScaffoldMessenger.of(context)
-                            .showSnackBar(SnackBar(content: Text(context.l10n.addedToCart(name))));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(context.l10n.addedToCart(name))),
+                        );
                       },
                     );
                   },
@@ -113,68 +154,124 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
           ),
-          const SizedBox(height: 32),
+
+          const SizedBox(height: 36),
+
+          // ── Кнопка «Смотреть всё меню» ───────────────────────────────────────
           Center(
             child: FilledButton.icon(
-              icon: const Icon(Icons.restaurant_menu),
+              icon : const Icon(Icons.restaurant_menu),
               label: Text(context.l10n.viewMenu, style: AppStyles.buttonText),
-              onPressed: () =>
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => MenuScreen(branchName: branch))),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => MenuScreen(branchName: branch)),
+              ),
             ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppColors.red,
-        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen())),
-        child: const Icon(Icons.shopping_cart),
-      ),
     );
+  }
+
+  /// Проверяем, существует ли файл в assets, чтобы не падать ошибкой.
+  Future<bool> _assetExists(String path) async {
+    try {
+      await rootBundle.load(path);
+      return true;
+    } catch (_) {
+      dev.log('Banner not found: $path');
+      return false;
+    }
   }
 }
 
 class _PopularCard extends StatelessWidget {
   final String name;
-  final int price;
+  final int    price;
   final String imageUrl;
+  final double width;
   final VoidCallback onAdd;
-  const _PopularCard({required this.name, required this.price, required this.imageUrl, required this.onAdd});
+
+  const _PopularCard({
+    required this.name,
+    required this.price,
+    required this.imageUrl,
+    required this.onAdd,
+    required this.width,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final theme        = Theme.of(context);
+    final surface      = theme.colorScheme.surface;
+    final onSurface    = theme.colorScheme.onSurface;
+    final subtitle     = theme.textTheme.bodyMedium?.copyWith(color: onSurface.withOpacity(.8));
+    final isDark       = theme.brightness == Brightness.dark;
+    final cardShadow   = isDark ? Colors.black.withOpacity(.2) : Colors.black26;
+
     return SizedBox(
-      width: 150,
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.cardBackground,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(.08), blurRadius: 6, offset: const Offset(0,4))],
-        ),
+      width: width,
+      child: Material(
+        color: surface,
+        borderRadius: BorderRadius.circular(16),
+        elevation: 4,
+        shadowColor: cardShadow,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CachedNetworkImage(
-              imageUrl: imageUrl,
-              placeholder: (_, __) => Image.asset('assets/placeholder.png', width: 72, height: 72, fit: BoxFit.cover),
-              errorWidget: (_, __, ___) => const Icon(Icons.broken_image, size: 72),
-              width: 72,
-              height: 72,
-              fit: BoxFit.cover,
+            // Изображение
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: CachedNetworkImage(
+                imageUrl    : imageUrl,
+                placeholder : (_, __) => Image.asset(
+                    'assets/placeholder.png',
+                    width: 96, height: 96, fit: BoxFit.cover),
+                errorWidget : (_, __, ___) => const Icon(Icons.broken_image, size: 96),
+                width       : 96,
+                height      : 96,
+                fit         : BoxFit.cover,
+              ),
             ),
+
+            const SizedBox(height: 10),
+
+            // Название
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Text(
+                name,
+                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+              ),
+            ),
+
+            // Цена
+            Text(
+              '$price ${context.l10n.som}',
+              style: subtitle?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppColors.red,
+              ),
+            ),
+
             const SizedBox(height: 8),
-            Text(name, style: AppStyles.cardTitle),
-            Text('$price ${context.l10n.som}', style: AppStyles.cardPrice),
-            const SizedBox(height: 6),
-            ElevatedButton(
-              onPressed: onAdd,
-              style: ElevatedButton.styleFrom(
+
+            // Кнопка «Добавить»
+            FilledButton(
+              style: FilledButton.styleFrom(
                 backgroundColor: AppColors.red,
-                minimumSize: const Size(40, 36),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                minimumSize: const Size(44, 36),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 padding: EdgeInsets.zero,
               ),
-              child: const Icon(Icons.add_shopping_cart, size: 18),
+              onPressed: onAdd,
+              child: const Icon(Icons.add_shopping_cart, size: 20),
             ),
+
+            const SizedBox(height: 10),
           ],
         ),
       ),

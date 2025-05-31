@@ -115,5 +115,11 @@
   "menuEmpty":   "Меню пусто",
   "addToCart":   "В корзину",
 
+  "categoryBurgers": "Бургеры",
+  "categorySides": "Гарниры",
+  "categoryDrinks": "Напитки",
+  "categoryDesserts": "Десерты",
+  "categoryOther": "Другое",
+
   "som": "сом"
 }

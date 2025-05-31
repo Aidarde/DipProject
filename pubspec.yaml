@@ -38,3 +38,5 @@ flutter:
     - assets/logo.png
     - assets/images/
     - assets/default_avatar.png
+    - assets/banners/
+    - assets/placeholder.png

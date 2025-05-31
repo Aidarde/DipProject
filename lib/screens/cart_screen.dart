@@ -1,5 +1,4 @@
 // lib/screens/cart_screen.dart
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -8,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../providers/cart_provider.dart';
 import '../providers/user_provider.dart';
+import '../providers/branch_provider.dart';
 import '../l10n/l10n_ext.dart';
 import '../theme/app_styles.dart';
 import '../utils/google_drive_link.dart';
@@ -20,17 +20,18 @@ class CartScreen extends StatefulWidget {
 }
 
 class _CartScreenState extends State<CartScreen> {
-  final List<String> _branches = [
-    'Центральный филиал',
-    'Филиал на Юге',
-    'Филиал на Севере',
-  ];
-  String? _selectedBranch;
+  String? _selectedBranch;     // хранит выбор на время сессии
 
   @override
   Widget build(BuildContext context) {
-    final cart = context.watch<CartProvider>();
-    final user = context.read<UserProvider>().user;
+    final cart        = context.watch<CartProvider>();
+    final user        = context.read<UserProvider>().user;
+    final branchProv  = context.watch<BranchProvider>();
+    final branches    = branchProv.branches;
+
+    // если ничего не выбрано, используем сохранённое значение провайдера
+    _selectedBranch ??= branchProv.selectedBranch;
+
     final total = cart.totalPrice.round();
 
     return Scaffold(
@@ -49,13 +50,15 @@ class _CartScreenState extends State<CartScreen> {
                 ),
               ),
               value: _selectedBranch,
-              items: _branches
+              items: branches
                   .map((b) => DropdownMenuItem(value: b, child: Text(b)))
                   .toList(),
-              onChanged: (val) => setState(() => _selectedBranch = val),
+              onChanged: (val) {
+                setState(() => _selectedBranch = val);
+                if (val != null) branchProv.setBranch(val);  // сохраняем выбор глобально
+              },
             ),
           ),
-
           Expanded(
             child: cart.items.isEmpty
                 ? Center(child: Text(context.l10n.cartEmpty))
@@ -69,33 +72,28 @@ class _CartScreenState extends State<CartScreen> {
                 final rawImage = item['image'] as String;
                 final url      = rawImage.toDriveDirect();
 
-                Widget leading;
-                if (url.startsWith('http')) {
-                  leading = CachedNetworkImage(
-                    imageUrl: url,
-                    placeholder: (_, __) => SizedBox(
-                      width: 50,
-                      height: 50,
-                      child: Center(
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    ),
-                    errorWidget: (_, __, ___) => const Icon(
-                      Icons.broken_image,
-                      size: 50,
-                    ),
+                final Widget leading = url.startsWith('http')
+                    ? CachedNetworkImage(
+                  imageUrl: url,
+                  placeholder: (_, __) => SizedBox(
                     width: 50,
                     height: 50,
-                    fit: BoxFit.cover,
-                  );
-                } else {
-                  leading = Image.asset(
-                    rawImage,
-                    width: 50,
-                    height: 50,
-                    fit: BoxFit.cover,
-                  );
-                }
+                    child: Center(
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                  errorWidget: (_, __, ___) =>
+                  const Icon(Icons.broken_image, size: 50),
+                  width: 50,
+                  height: 50,
+                  fit: BoxFit.cover,
+                )
+                    : Image.asset(
+                  rawImage,
+                  width: 50,
+                  height: 50,
+                  fit: BoxFit.cover,
+                );
 
                 return ListTile(
                   contentPadding: const EdgeInsets.symmetric(vertical: 8),
@@ -118,7 +116,6 @@ class _CartScreenState extends State<CartScreen> {
           ),
         ],
       ),
-
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -136,24 +133,43 @@ class _CartScreenState extends State<CartScreen> {
               onPressed: cart.items.isEmpty || _selectedBranch == null || user == null
                   ? null
                   : () async {
-                final earned = (total * 0.1).round();
-                // 1) создаём заказ
+                final rewardCost = cart.rewardCostTotal;        // ← сколько баллов «уходит»
+                final earned     = (total * 0.1).round();       // ← сколько начислим
+
                 await FirebaseFirestore.instance.collection('orders').add({
-                  'userId':     user.uid,
+                  'userId'    : user.uid,
                   'branchName': _selectedBranch!,
-                  'items':      cart.items,
-                  'total':      total,
-                  'timestamp':  FieldValue.serverTimestamp(),
-                  'status':     'в обработке',
+                  'items'     : cart.items,
+                  'total'     : total,
+                  'timestamp' : FieldValue.serverTimestamp(),
+                  'status'    : 'в обработке',
                 });
-                // 2) начисляем бонусы
+
+// начисляем +10 % и вычитаем за награды за ОДНУ транзакцию
                 await FirebaseFirestore.instance
                     .collection('users')
                     .doc(user.uid)
-                    .update({'bonusPoints': FieldValue.increment(earned)});
-                // 3) обновляем провайдер
+                    .update({
+                  'bonusPoints': FieldValue.increment(earned - rewardCost),
+                });
+
+// (при желании: заносим подтверждённые награды в history)
+                for (var it in cart.items.where((e) => (e['rewardCost'] as int? ?? 0) > 0)) {
+                  await FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(user.uid)
+                      .collection('rewardHistory')
+                      .add({
+                    'title'    : it['name'],
+                    'cost'     : it['rewardCost'],
+                    'imageUrl' : it['image'],
+                    'exchangedAt': FieldValue.serverTimestamp(),
+                  });
+                }
+
                 await context.read<UserProvider>().loadUser(user.uid);
                 cart.clearCart();
+
                 if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text(context.l10n.orderPlaced(earned))),
