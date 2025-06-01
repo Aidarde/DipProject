@@ -115,11 +115,40 @@
   "menuEmpty":   "Меню пусто",
   "addToCart":   "В корзину",
 
-  "categoryBurgers": "Бургеры",
-  "categorySides": "Гарниры",
-  "categoryDrinks": "Напитки",
+  "categoryBurgers":  "Бургеры",
+  "categorySides":    "Гарниры",
+  "categoryDrinks":   "Напитки",
   "categoryDesserts": "Десерты",
-  "categoryOther": "Другое",
+  "categoryOther":    "Другое",
 
-  "som": "сом"
+  "som": "сом",
+
+  "noBranchAssigned": "Не указан филиал для этого администратора",
+
+  "filter": "Фильтр:",
+  "all": "Все",
+  "pending": "Ожидается",
+  "inProcess": "В обработке",
+  "ready": "Готов",
+  "delivered": "Выдан",
+  "noOrdersForFilter": "Нет заказов по выбранному фильтру",
+
+  "order": "Заказ #{id}",
+  "@order": {
+    "placeholders": { "id": { "type": "String" } }
+  },
+  "changeStatus": "Изменить статус:",
+
+  "welcomeBack": "С возвращением!",
+  "login": "Войти",
+  "loginWithGoogle": "Войти через Google",
+
+  "registerTab": "Регистрация",
+  "confirmPassword": "Подтвердите пароль",
+  "alreadyHaveAccount": "Уже есть аккаунт? Войти",
+
+  "inCart": "В корзине",
+  "noRewardsYet": "Награды отсутствуют"
+
+
 }

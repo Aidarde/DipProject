@@ -27,14 +27,13 @@ import 'theme/theme.dart';
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
-
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  await FCMService.init(navigatorKey);  // инициализируем пуши и локальные уведомления
+  await FCMService.init(navigatorKey); // инициализируем пуши и локальные уведомления
 
   final prefs = await SharedPreferences.getInstance();
   final isDark = prefs.getBool('isDarkMode') ?? false;
-  final code   = prefs.getString('locale') ?? 'ru';
+  final code = prefs.getString('locale') ?? 'ru';
 
   runApp(
     MultiProvider(
@@ -46,8 +45,8 @@ Future<void> main() async {
         ChangeNotifierProxyProvider<UserProvider, BranchProvider>(
           create: (_) => BranchProvider(),
           update: (_, userProv, branchProv) {
-            final branch = userProv.user?.branchName;
-            if (branch != null) branchProv!..setBranch(branch);
+            final branch = userProv.user?.branchName ?? '';
+            if (branch.isNotEmpty) branchProv!..setBranch(branch);
             return branchProv!;
           },
         ),
@@ -82,16 +81,16 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProv  = context.watch<ThemeProvider>();
+    final themeProv = context.watch<ThemeProvider>();
     final localeProv = context.watch<LocaleProvider>();
 
     return MaterialApp(
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
-      theme:     AppThemes.lightTheme,
+      theme: AppThemes.lightTheme,
       darkTheme: AppThemes.darkTheme,
       themeMode: themeProv.themeMode,
-      locale:    localeProv.locale,
+      locale: localeProv.locale,
       supportedLocales: const [Locale('ru'), Locale('ky')],
       localizationsDelegates: const [
         AppLocalizations.delegate,
@@ -99,12 +98,12 @@ class _MyAppState extends State<MyApp> {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      home: const AuthWrapper(),  // теперь конструктор есть! :contentReference[oaicite:1]{index=1}
+      home: const AuthWrapper(),
       routes: {
-        '/login'       : (_) => const LoginScreen(),
-        '/main'        : (_) => const MainScreen(),
-        '/admin'       : (_) => const AdminScreen(),
-        '/orders'      : (_) => const OrdersScreen(),
+        '/login': (_) => const LoginScreen(),
+        '/main': (_) => const MainScreen(),
+        '/admin': (_) => const AdminScreen(),
+        '/orders': (_) => const OrdersScreen(),
         '/orderDetails': (_) => const OrderDetailScreen(),
       },
     );
@@ -119,13 +118,13 @@ class AuthWrapper extends StatelessWidget {
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (ctx, authSnap) {
-        if (authSnap.connectionState == ConnectionState.waiting) {
+      builder: (ctx, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        final fbUser = authSnap.data;
+        final fbUser = snap.data;
         if (fbUser == null) {
           return const LoginScreen();
         }
@@ -164,10 +163,8 @@ class _UserLoaderState extends State<_UserLoader> {
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        final role = context.read<UserProvider>().user?.role;
-        return role == 'admin'
-            ? const AdminScreen()
-            : const MainScreen();
+        final role = context.read<UserProvider>().user?.role ?? 'user';
+        return role == 'admin' ? const AdminScreen() : const MainScreen();
       },
     );
   }

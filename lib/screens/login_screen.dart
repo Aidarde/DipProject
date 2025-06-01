@@ -1,8 +1,8 @@
 // lib/screens/login_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
 import '../services/auth_service.dart';
 import '../providers/user_provider.dart';
 import '../l10n/l10n_ext.dart';
@@ -11,7 +11,7 @@ import '../theme/app_colors.dart';
 import 'registration_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({Key? key}) : super(key: key);
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -19,7 +19,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _email = TextEditingController();
-  final _pass  = TextEditingController();
+  final _pass = TextEditingController();
   String? _err;
   bool _loading = false;
 
@@ -35,7 +35,9 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       final uid = credential?.user?.uid;
       if (uid != null) {
-        await _openByRole(uid);
+        await context.read<UserProvider>().loadUser(uid);
+        if (!mounted) return;
+        Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false);
       } else {
         setState(() => _err = context.l10n.unexpectedError);
       }
@@ -57,7 +59,9 @@ class _LoginScreenState extends State<LoginScreen> {
       final credential = await AuthService.signInWithGoogle();
       final uid = credential?.user?.uid;
       if (uid != null) {
-        await _openByRole(uid);
+        await context.read<UserProvider>().loadUser(uid);
+        if (!mounted) return;
+        Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false);
       } else {
         setState(() => _err = context.l10n.unexpectedError);
       }
@@ -66,14 +70,6 @@ class _LoginScreenState extends State<LoginScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
-  }
-
-  Future<void> _openByRole(String uid) async {
-    // Загружаем профиль и FCM-токен
-    await context.read<UserProvider>().loadUser(uid);
-    // Возвращаемся на корневой маршрут — AuthWrapper сам разберёт роль
-    if (!mounted) return;
-    Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false);
   }
 
   @override
@@ -90,7 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const Icon(Icons.login, size: 72, color: AppColors.red),
               const SizedBox(height: 16),
               Text(
-                context.l10n.welcome,
+                context.l10n.welcomeBack,
                 textAlign: TextAlign.center,
                 style: AppStyles.headline,
               ),
@@ -119,12 +115,12 @@ class _LoginScreenState extends State<LoginScreen> {
               else ...[
                 FilledButton(
                   onPressed: _loginEmail,
-                  child: Text(context.l10n.loginEmail),
+                  child: Text(context.l10n.login),
                 ),
                 const SizedBox(height: 12),
                 FilledButton.tonalIcon(
                   icon: const Icon(Icons.account_circle),
-                  label: Text(context.l10n.loginGoogle),
+                  label: Text(context.l10n.loginWithGoogle),
                   onPressed: _loginGoogle,
                 ),
               ],
@@ -133,9 +129,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) => const RegistrationScreen(),
-                    ),
+                    MaterialPageRoute(builder: (_) => const RegistrationScreen()),
                   );
                 },
                 child: Text(context.l10n.noAccount),

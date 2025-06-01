@@ -2,20 +2,15 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../providers/user_provider.dart';
-import '../theme/app_colors.dart';
-import '../theme/app_styles.dart';
 import '../l10n/l10n_ext.dart';
-
-import '../utils/google_drive_link.dart';
-import 'home_screen.dart';
-import 'orders_screen.dart';
-import 'rewards_screen.dart';
-import 'settings_screen.dart';
+import '../theme/app_styles.dart';
+import '../theme/app_colors.dart';
+import '../screens/home_screen.dart';
+import '../screens/orders_screen.dart';
+import '../screens/rewards_screen.dart';
+import '../screens/settings_screen.dart';
 import 'cart_screen.dart';
-import 'admin_screen.dart';
-import 'login_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({Key? key}) : super(key: key);
@@ -49,10 +44,8 @@ class _MainScreenState extends State<MainScreen> {
           );
         },
         backgroundColor: AppColors.red,
-        shape: const CircleBorder(),
         child: const Icon(Icons.shopping_cart),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         type: BottomNavigationBarType.fixed,
@@ -84,5 +77,3 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 }
-
-

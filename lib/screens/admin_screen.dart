@@ -1,50 +1,79 @@
-import 'package:enjoy/utils/universal_image.dart';
-import 'package:flutter/material.dart';
+// lib/screens/admin_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../providers/user_provider.dart';
+import '../providers/theme_provider.dart';
+import '../providers/locale_provider.dart';
 import '../services/auth_service.dart';
-import '../utils/google_drive_link.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_styles.dart';
+import '../utils/universal_image.dart';
+import '../l10n/l10n_ext.dart';
+
+const kStatuses = <String>[
+  'ожидается',
+  'в обработке',
+  'готов',
+  'выдан',
+];
 
 class AdminScreen extends StatefulWidget {
-  const AdminScreen({super.key});
+  const AdminScreen({Key? key}) : super(key: key);
 
   @override
   State<AdminScreen> createState() => _AdminScreenState();
 }
 
 class _AdminScreenState extends State<AdminScreen> {
-  String statusFilter = 'все';
+  /// выбранный фильтр статуса (по-умолчанию «все»)
+  String _statusFilter = 'все';
 
-  Color getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'ожидается':   return Colors.grey;
-      case 'в обработке': return Colors.orange;
-      case 'готов':       return Colors.green;
-      case 'выдан':       return Colors.blue;
-      default:            return Colors.black;
+  Color _statusColor(String s) {
+    switch (s) {
+      case 'ожидается':
+        return Colors.grey;
+      case 'в обработке':
+        return Colors.orange;
+      case 'готов':
+        return Colors.green;
+      case 'выдан':
+        return Colors.blue;
+      default:
+        return Colors.black;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final userProv = context.watch<UserProvider>();
-    final appUser  = userProv.user;
+    final l10n      = context.l10n;
+    final userProv  = context.watch<UserProvider>();
+    final themeProv = context.watch<ThemeProvider>();
+    final localeProv = context.watch<LocaleProvider>();
 
-    if (userProv.isLoading || appUser == null) {
+    // 1. ожидание загрузки профиля
+    if (userProv.isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-
-    final branchName = appUser.branchName;
-    if (branchName == null) {
+    final user = userProv.user;
+    if (user == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Панель администратора')),
-        body: const Center(child: Text('Не указан филиал для этого администратора')),
+        body: Center(child: Text(l10n.userNotFound)),
       );
     }
 
+    // 2. проверка филиала
+    final branchName = (user.branchName ?? '').trim();
+    if (branchName.isEmpty) {
+      return Scaffold(
+        appBar: _buildAppBar(l10n, themeProv, localeProv),
+        body: Center(child: Text(l10n.noBranchAssigned)),
+      );
+    }
+
+    // 3. стрим заказов конкретного филиала
     final ordersStream = FirebaseFirestore.instance
         .collection('orders')
         .where('branchName', isEqualTo: branchName)
@@ -52,145 +81,106 @@ class _AdminScreenState extends State<AdminScreen> {
         .snapshots();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Панель администратора'),
-        backgroundColor: Colors.redAccent,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async => AuthService.signOut(),
-          ),
-        ],
-      ),
+      appBar: _buildAppBar(l10n, themeProv, localeProv),
       body: Column(
         children: [
-          // шапка с названием филиала
-          Container(
-            width: double.infinity,
-            color: Colors.redAccent.shade100,
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+          // ── инфо-полоса + фильтр ────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: Row(
               children: [
-                const Icon(Icons.store, color: Colors.white),
-                const SizedBox(width: 8),
-                Expanded(
+                Flexible(
                   child: Text(
-                    'Филиал: $branchName',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    l10n.branch(branchName),
+                    style: AppStyles.sectionTitle,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-              ],
-            ),
-          ),
-
-          // фильтр по статусу
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: Row(
-              children: [
-                const Text('Фильтр: ', style: TextStyle(fontSize: 16)),
-                const SizedBox(width: 12),
+                const Spacer(),
+                Text(l10n.filter),
+                const SizedBox(width: 8),
                 DropdownButton<String>(
-                  value: statusFilter,
-                  items: const [
-                    DropdownMenuItem(value: 'все',          child: Text('Все')),
-                    DropdownMenuItem(value: 'ожидается',   child: Text('Ожидается')),
-                    DropdownMenuItem(value: 'в обработке', child: Text('В обработке')),
-                    DropdownMenuItem(value: 'готов',       child: Text('Готов')),
-                    DropdownMenuItem(value: 'выдан',       child: Text('Выдан')),
+                  value: _statusFilter,
+                  underline: const SizedBox(),
+                  items: [
+                    DropdownMenuItem(value: 'все', child: Text(l10n.all)),
+                    ...kStatuses.map((s) {
+                      final txt = _localizedStatus(l10n, s);
+                      return DropdownMenuItem(value: s, child: Text(txt));
+                    }),
                   ],
-                  onChanged: (value) => setState(() => statusFilter = value!),
+                  onChanged: (v) => setState(() => _statusFilter = v ?? 'все'),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 4),
 
-          // список заказов
+          // ── список заказов ─────────────────────────────────────────────────
           Expanded(
             child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: ordersStream,
-              builder: (context, snap) {
+              builder: (ctx, snap) {
                 if (snap.hasError) {
-                  return Center(child: Text('Ошибка: ${snap.error}'));
+                  return Center(child: Text(l10n.errorLoading('${snap.error}')));
                 }
-                if (snap.connectionState == ConnectionState.waiting) {
+                if (!snap.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                final docs = snap.data!.docs.where((doc) {
-                  final status = (doc['status'] ?? '').toString().toLowerCase();
-                  return statusFilter == 'все' || status == statusFilter;
+                final docs = snap.data!.docs.where((d) {
+                  final s = (d['status'] ?? '').toString().toLowerCase();
+                  return _statusFilter == 'все' || s == _statusFilter;
                 }).toList();
 
                 if (docs.isEmpty) {
-                  return const Center(child: Text('Нет заказов по выбранному фильтру'));
+                  return Center(child: Text(l10n.noOrdersForFilter));
                 }
 
                 return ListView.builder(
+                  padding: const EdgeInsets.all(16),
                   itemCount: docs.length,
                   itemBuilder: (ctx, i) {
                     final data   = docs[i].data();
-                    final items  = List<Map<String, dynamic>>.from(data['items'] ?? []);
-                    final status = data['status'] ?? '—';
-                    final total  = data['total']  ?? 0;
+                    final id     = docs[i].id;
+                    final status = (data['status'] as String?)?.toLowerCase() ?? '';
+                    final total  = (data['total'] as num?)?.round() ?? 0;
                     final ts     = (data['timestamp'] as Timestamp?)?.toDate();
+                    final items  = List<Map<String, dynamic>>.from(data['items'] ?? []);
 
                     return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      margin: const EdgeInsets.symmetric(vertical: 6),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       child: ExpansionTile(
-                        title: Text('Заказ #${docs[i].id}'),
+                        title: Text(l10n.order(id)),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Сумма: $total сом'),
-                            Row(
-                              children: [
-                                const Text('Статус: '),
-                                Text(
-                                  status.toString().toUpperCase(),
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: getStatusColor(status),
-                                  ),
-                                ),
-                              ],
+                            Text(l10n.amount(total)),
+                            Text(
+                              l10n.status(_localizedStatus(l10n, status)),
+                              style: TextStyle(color: _statusColor(status)),
                             ),
-                            Text('Дата: ${ts != null ? ts.toLocal().toString().split('.')[0] : '—'}'),
+                            if (ts != null)
+                              Text(l10n.date(
+                                  '${ts.day.toString().padLeft(2, '0')}.${ts.month.toString().padLeft(2, '0')}.${ts.year} '
+                                      '${ts.hour.toString().padLeft(2, '0')}:${ts.minute.toString().padLeft(2, '0')}')),
                           ],
                         ),
                         children: [
                           ...items.map((it) {
-                            final raw   = it['image'] as String? ?? '';
-                            final url   = raw.toDriveDirect();
-                            final name  = it['name']  ?? '-';
-                            final price = it['price'] ?? 0;
+                            final url   = it['image'] as String? ?? '';
+                            final name  = it['name']  as String? ?? '-';
+                            final price = (it['price'] as num?)?.round() ?? 0;
 
-                            Widget leading;
-                            if (url.startsWith('http')) {
-                              leading = UniversalImage(url, width: 56, height: 56, borderRadius: 8);
-                            } else {
-                              leading = Image.asset(
-                                raw,
-                                width: 32,
-                                height: 32,
-                                fit: BoxFit.cover,
-                              );
-                            }
+                            final img = url.startsWith('http')
+                                ? UniversalImage(url, width: 56, height: 56, borderRadius: 8)
+                                : Image.asset(url, width: 40, height: 40, fit: BoxFit.cover);
 
                             return ListTile(
-                              leading: ClipRRect(
-                                borderRadius: BorderRadius.circular(6),
-                                child: leading,
-                              ),
-                              title: Text(name.toString()),
-                              trailing: Text('$price сом'),
+                              leading: ClipRRect(borderRadius: BorderRadius.circular(6), child: img),
+                              title: Text(name),
+                              trailing: Text('$price ${l10n.som}'),
                             );
                           }),
                           const Divider(),
@@ -198,21 +188,21 @@ class _AdminScreenState extends State<AdminScreen> {
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             child: Row(
                               children: [
-                                const Text('Изменить статус:'),
+                                Text(l10n.changeStatus),
                                 const SizedBox(width: 12),
                                 DropdownButton<String>(
                                   value: status,
-                                  items: const [
-                                    DropdownMenuItem(value: 'ожидается',   child: Text('Ожидается')),
-                                    DropdownMenuItem(value: 'в обработке', child: Text('В обработке')),
-                                    DropdownMenuItem(value: 'готов',       child: Text('Готов')),
-                                    DropdownMenuItem(value: 'выдан',       child: Text('Выдан')),
-                                  ],
+                                  items: kStatuses.map((s) {
+                                    return DropdownMenuItem(
+                                      value: s,
+                                      child: Text(_localizedStatus(l10n, s)),
+                                    );
+                                  }).toList(),
                                   onChanged: (newStatus) {
                                     if (newStatus != null) {
                                       FirebaseFirestore.instance
                                           .collection('orders')
-                                          .doc(docs[i].id)
+                                          .doc(id)
                                           .update({'status': newStatus});
                                     }
                                   },
@@ -230,6 +220,84 @@ class _AdminScreenState extends State<AdminScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Строка-перевод для статуса
+  String _localizedStatus(AppLocalizations l10n, String s) {
+    switch (s) {
+      case 'ожидается':
+        return l10n.pending;
+      case 'в обработке':
+        return l10n.inProcess;
+      case 'готов':
+        return l10n.ready;
+      case 'выдан':
+        return l10n.delivered;
+      default:
+        return s;
+    }
+  }
+
+  /// Общий AppBar с выходом / тема / язык
+  AppBar _buildAppBar(
+      AppLocalizations l10n, ThemeProvider themeProv, LocaleProvider localeProv) {
+    return AppBar(
+      title: Text('Панель администратора', style: AppStyles.appBarTitle),
+      backgroundColor: AppColors.red,
+      actions: [
+        PopupMenuButton<String>(
+          onSelected: (val) async {
+            switch (val) {
+              case 'theme':
+                themeProv.toggleTheme();
+                break;
+              case 'lang':
+                final isRu = localeProv.locale.languageCode == 'ru';
+                localeProv.setLocale(Locale(isRu ? 'ky' : 'ru'));
+                break;
+              case 'logout':
+                await AuthService.signOut();
+                break;
+            }
+          },
+          itemBuilder: (_) => [
+            PopupMenuItem(
+              value: 'theme',
+              child: Row(
+                children: [
+                  Icon(themeProv.themeMode == ThemeMode.dark
+                           ? Icons.light_mode
+                           : Icons.dark_mode),
+                  const SizedBox(width: 8),
+                  Text(themeProv.themeMode == ThemeMode.dark ? 'Light' : 'Dark'),
+                ],
+              ),
+            ),
+            PopupMenuItem(
+              value: 'lang',
+              child: Row(
+                children: [
+                  const Icon(Icons.language),
+                  const SizedBox(width: 8),
+                  Text(localeProv.locale.languageCode == 'ru' ? 'Кыргызча' : 'Русский'),
+                ],
+              ),
+            ),
+            const PopupMenuDivider(),
+            PopupMenuItem(
+              value: 'logout',
+              child: Row(
+                children: [
+                  const Icon(Icons.logout),
+                  const SizedBox(width: 8),
+                  Text(l10n.logout),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

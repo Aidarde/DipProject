@@ -1,15 +1,14 @@
 // lib/screens/orders_screen.dart
-
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:enjoy/utils/universal_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import '../utils/google_drive_link.dart';
+import '../l10n/l10n_ext.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_styles.dart';
-import '../l10n/l10n_ext.dart';
+import '../utils/google_drive_link.dart';
+import '../utils/universal_image.dart';
 
 class OrdersScreen extends StatelessWidget {
   const OrdersScreen({Key? key}) : super(key: key);
@@ -18,9 +17,7 @@ class OrdersScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      return Scaffold(
-        body: Center(child: Text(context.l10n.userNotFound)),
-      );
+      return Scaffold(body: Center(child: Text(context.l10n.userNotFound)));
     }
 
     return Scaffold(
@@ -49,9 +46,7 @@ class OrdersScreen extends StatelessWidget {
 
           final orders = snap.data?.docs ?? [];
           if (orders.isEmpty) {
-            return Center(
-              child: Text(context.l10n.noOrdersYet, style: AppStyles.cardPrice),
-            );
+            return Center(child: Text(context.l10n.noOrdersYet, style: AppStyles.cardPrice));
           }
 
           return ListView.builder(
@@ -60,9 +55,9 @@ class OrdersScreen extends StatelessWidget {
             itemBuilder: (_, i) {
               final data   = orders[i].data();
               final items  = List<Map<String, dynamic>>.from(data['items'] ?? []);
-              final branch = data['branchName'] as String?  ?? '';
-              final total  = (data['total']     as num?)?.round()  ?? 0;
-              final status = data['status']     as String? ?? '';
+              final branch = data['branchName'] as String? ?? '';
+              final total  = (data['total'] as num?)?.round() ?? 0;
+              final status = (data['status'] as String? ?? '').toLowerCase();
               final ts     = (data['timestamp'] as Timestamp?)?.toDate();
 
               return Container(
@@ -70,13 +65,7 @@ class OrdersScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(.05),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    )
-                  ],
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(.05), blurRadius: 8, offset: const Offset(0, 4))],
                 ),
                 child: ExpansionTile(
                   tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -87,7 +76,7 @@ class OrdersScreen extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(context.l10n.amount(total), style: AppStyles.cardPrice),
                       Text(
-                        context.l10n.status(status),
+                        context.l10n.status(_localizedStatus(context, status)),
                         style: AppStyles.cardPrice.copyWith(color: _statusColor(status)),
                       ),
                       if (ts != null)
@@ -103,18 +92,12 @@ class OrdersScreen extends StatelessWidget {
                     final rawImage = item['image'] as String? ?? '';
                     final url      = rawImage.toDriveDirect();
 
-                    Widget leading;
-                    if (url.startsWith('http')) {
-                      leading = UniversalImage(url, width: 56, height: 56, borderRadius: 8);
-                    } else {
-                      leading = Image.asset(rawImage, width: 40, height: 40, fit: BoxFit.cover);
-                    }
+                    final leading = url.startsWith('http')
+                        ? UniversalImage(url, width: 56, height: 56, borderRadius: 8)
+                        : Image.asset(rawImage, width: 40, height: 40, fit: BoxFit.cover);
 
                     return ListTile(
-                      leading: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: leading,
-                      ),
+                      leading: ClipRRect(borderRadius: BorderRadius.circular(8), child: leading),
                       title: Text(name, style: AppStyles.cardTitle.copyWith(fontSize: 15)),
                       subtitle: Text(context.l10n.amount(price), style: AppStyles.cardPrice),
                     );
@@ -128,17 +111,30 @@ class OrdersScreen extends StatelessWidget {
     );
   }
 
+  // --- helpers --------------------------------------------------------------
+
+  /// Перевод системного статуса в человекочитаемый (локализованный) текст.
+  String _localizedStatus(BuildContext ctx, String status) {
+    switch (status) {
+      case 'ожидается':   return ctx.l10n.pending;
+      case 'в обработке': return ctx.l10n.inProcess;
+      case 'готов':       return ctx.l10n.ready;
+      case 'выдан':       return ctx.l10n.delivered;
+      default:            return status; // если появится новый статус
+    }
+  }
+
   String _fmt(DateTime d) =>
-      '${d.day.toString().padLeft(2,'0')}.${d.month.toString().padLeft(2,'0')}.${d.year} '
-          '${d.hour.toString().padLeft(2,'0')}:${d.minute.toString().padLeft(2,'0')}';
+      '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}.${d.year} '
+          '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
 
   Color _statusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'ожидается':    return Colors.orange;
-      case 'в обработке':  return Colors.blue;
-      case 'готов':        return AppColors.success;
-      case 'выдан':        return AppColors.darkGreyText;
-      default:             return Colors.black;
+    switch (status) {
+      case 'ожидается':   return Colors.orange;
+      case 'в обработке': return Colors.blue;
+      case 'готов':       return AppColors.success;
+      case 'выдан':       return AppColors.darkGreyText;
+      default:            return Colors.black;
     }
   }
 }

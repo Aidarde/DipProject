@@ -57,8 +57,8 @@
   },
 
   "noRewardsYet": "Азырынча сыйлыктар жок",
-  "exchange": "Алмаштыруу",
-  "goToCart": "Себетке",
+  "exchange":     "Алмаштыруу",
+  "goToCart":     "Себетке",
 
 
   "cartTitle": "Себет",
@@ -81,12 +81,12 @@
   "menuTitle": "Меню",
 
 
-  "welcome": "Кош келиңиз!",
-  "email": "Email",
-  "password": "Сыр сөз",
-  "loginEmail": "Email менен кирүү",
-  "loginGoogle": "Google менен кирүү",
-  "noAccount": "Аккаунтуңуз жокпу? Катталуу",
+  "welcome":        "Кош келиңиз!",
+  "email":          "Email",
+  "password":       "Сыр сөз",
+  "loginEmail":     "Email менен кирүү",
+  "loginGoogle":    "Google менен кирүү",
+  "noAccount":      "Аккаунтуңуз жокпу? Катталуу",
   "unexpectedError": "Белгисиз ката",
 
 
@@ -112,14 +112,40 @@
   "save":     "Сактоо",
   "noEmail":  "Email жок",
 
-  "menuEmpty":   "Себет бош",
-  "addToCart":   "себетке кошуу",
+  "menuEmpty":   "Меню бош",
+  "addToCart":   "Себетке кошуу",
 
-  "categoryBurgers": "Бургерлер",
-  "categorySides": "Гарнирлер",
-  "categoryDrinks": "Суусундуктар",
+  "categoryBurgers":  "Бургерлер",
+  "categorySides":    "Гарнирлер",
+  "categoryDrinks":   "Суусундуктар",
   "categoryDesserts": "Десерттер",
-  "categoryOther": "Башка",
+  "categoryOther":    "Башка",
 
-  "som": "сом"
+  "som": "сом",
+  "noBranchAssigned": "Бул администратор үчүн филиал көрсөтүлгөн эмес",
+
+  "filter": "Фильтр:",
+  "all": "Баары",
+  "pending": "Күтүлүүдө",
+  "inProcess": "Иштелүүдө",
+  "ready": "Даяр",
+  "delivered": "Берилди",
+  "noOrdersForFilter": "Тандалган фильтр боюнча буйруктар жок",
+
+  "order": "Буйрутма #{id}",
+  "@order": {
+    "placeholders": { "id": { "type": "String" } }
+  },
+  "changeStatus": "Статусун өзгөртүү:",
+
+  "welcomeBack": "Кайттыңызбы!",
+  "login": "Кирүү",
+  "loginWithGoogle": "Google менен кирүү",
+
+  "registerTab": "Катталуу",
+  "confirmPassword": "Сыр сөздү ырастаңыз",
+  "alreadyHaveAccount": "Аккаунтуңуз барбы? Кирүү",
+
+  "inCart": "Себетте",
+  "noRewardsYet": "Сыйлыктар жок"
 }
